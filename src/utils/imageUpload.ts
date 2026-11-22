@@ -48,5 +48,12 @@ export async function compressImageFile(file: File): Promise<string> {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  return canvas.toDataURL('image/jpeg', 0.82);
+  let out = canvas.toDataURL('image/jpeg', 0.82);
+  if (out.length > 220000) {
+    out = canvas.toDataURL('image/jpeg', 0.65);
+  }
+  if (out.length > 220000) {
+    out = canvas.toDataURL('image/jpeg', 0.5);
+  }
+  return out;
 }

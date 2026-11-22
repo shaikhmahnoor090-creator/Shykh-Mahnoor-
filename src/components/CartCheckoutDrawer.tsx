@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import type { User } from 'firebase/auth';
 import {
   X,
   Trash2,
@@ -11,7 +12,10 @@ import {
   ArrowLeft,
   ShieldCheck,
   AlertCircle,
+  LogIn,
+  MessageCircle,
 } from 'lucide-react';
+import { signInWithGoogle } from '../firebase';
 import type {
   CityRate,
   Order,
@@ -21,7 +25,7 @@ import type {
   TcsServiceTier,
 } from '../types/store';
 import { assetUrl, computeDeliveryFee, formatPKR, formatPaymentLabel } from '../utils/format';
-import { createOrder } from '../utils/storeApi';
+import { buildWhatsAppOrderUrl, createOrder } from '../utils/storeApi';
 
 export interface CartItem {
   product: Product;
@@ -39,6 +43,9 @@ interface CartCheckoutDrawerProps {
   selectedCityId: string;
   onSelectCity: (cityId: string) => void;
   paymentSettings: PaymentSettings;
+  orders: Order[];
+  products: Product[];
+  authUser: User | null;
   onOrderCreated: (order: Order) => void;
   onTrackOrder: (trackingId: string) => void;
   initialStep?: 'bag' | 'checkout';
@@ -55,6 +62,9 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
   selectedCityId,
   onSelectCity,
   paymentSettings,
+  orders,
+  products,
+  authUser,
   onOrderCreated,
   onTrackOrder,
   initialStep = 'bag',
@@ -71,6 +81,8 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
   const [paymentPin, setPaymentPin] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [showWhatsAppFallback, setShowWhatsAppFallback] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
@@ -105,9 +117,52 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
 
   if (!isOpen) return null;
 
+  const whatsappDraftUrl = buildWhatsAppOrderUrl({
+    supportPhone: paymentSettings.supportPhone,
+    orderId: confirmedOrder?.id,
+    tcsTrackingId: confirmedOrder?.tcsTrackingId,
+    customerName: confirmedOrder?.customerName || customerName.trim() || 'Customer',
+    customerPhone: confirmedOrder?.customerPhone || customerPhone.trim() || '-',
+    address: confirmedOrder?.address || address.trim() || '-',
+    cityName: confirmedOrder?.cityName || selectedCity?.city || 'Pakistan',
+    tcsServiceTier: confirmedOrder?.tcsServiceTier || tcsTier,
+    paymentMethod: confirmedOrder?.paymentMethod || paymentMethod,
+    items: confirmedOrder
+      ? confirmedOrder.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+      : items.map((i) => ({ name: i.product.name, quantity: i.quantity, price: i.product.price })),
+    total: confirmedOrder?.total ?? total,
+  });
+
+  const handleCustomerGoogleSignIn = async () => {
+    setErrorMsg('');
+    setShowWhatsAppFallback(false);
+    setAuthLoading(true);
+    try {
+      const signed = await signInWithGoogle();
+      if (!customerName.trim() && signed.displayName) {
+        setCustomerName(signed.displayName);
+      }
+      return signed;
+    } catch (err) {
+      const raw = err instanceof Error ? err.message : 'Google Sign-In failed.';
+      if (raw.includes('unauthorized-domain') || raw.includes('popup-blocked')) {
+        setErrorMsg(
+          'Google popup blocked or domain not yet added in Firebase Console. Aap neeche se direct WhatsApp par order bhej sakte hain!'
+        );
+        setShowWhatsAppFallback(true);
+      } else {
+        setErrorMsg(raw);
+      }
+      return null;
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setShowWhatsAppFallback(false);
 
     if (!customerName.trim() || !customerPhone.trim() || !address.trim()) {
       setErrorMsg('Please fill in your full name, phone number, and delivery address.');
@@ -132,18 +187,35 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
 
     setSubmitting(true);
     try {
-      const data = await createOrder({
-        customerName,
-        customerPhone,
-        address,
-        postalCode,
-        cityId: selectedCity?.id || '',
-        tcsServiceTier: tcsTier,
-        paymentMethod,
-        paymentAccountNumber: paymentMethod === 'cod' ? undefined : paymentAccountNumber,
-        paymentPin: paymentMethod === 'cod' ? undefined : paymentPin,
-        items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
-      });
+      if (!authUser) {
+        const signed = await handleCustomerGoogleSignIn();
+        if (!signed) {
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const data = await createOrder(
+        {
+          customerName,
+          customerPhone,
+          address,
+          postalCode,
+          cityId: selectedCity?.id || '',
+          tcsServiceTier: tcsTier,
+          paymentMethod,
+          paymentAccountNumber: paymentMethod === 'cod' ? undefined : paymentAccountNumber,
+          paymentPin: paymentMethod === 'cod' ? undefined : paymentPin,
+          items: items.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+        },
+        {
+          products,
+          cities,
+          paymentSettings,
+          orders,
+          updatedAt: new Date().toISOString(),
+        }
+      );
       setConfirmedOrder(data.order);
       onOrderCreated(data.order);
       onClearCart();
@@ -333,11 +405,50 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
           {step === 'checkout' && (
             <form id="mismu-checkout-form" onSubmit={handlePlaceOrder} className="space-y-6">
               {errorMsg && (
-                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{errorMsg}</span>
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{errorMsg}</span>
+                  </div>
+                  {showWhatsAppFallback && (
+                    <a
+                      href={whatsappDraftUrl}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      Send Order on WhatsApp
+                    </a>
+                  )}
                 </div>
               )}
+
+              {/* Quick Google Verification Banner */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-700">
+                  {authUser ? (
+                    <span>
+                      Signed in as{' '}
+                      <strong className="text-slate-900">{authUser.email}</strong>
+                    </span>
+                  ) : (
+                    <span>
+                      Order save karne ke liye 1-tap{' '}
+                      <strong className="text-slate-900">Google Sign-In</strong> karein.
+                    </span>
+                  )}
+                </div>
+                {!authUser && (
+                  <button
+                    type="button"
+                    disabled={authLoading}
+                    onClick={() => void handleCustomerGoogleSignIn()}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-xs font-semibold whitespace-nowrap shrink-0"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    {authLoading ? 'Signing In...' : 'Sign in'}
+                  </button>
+                )}
+              </div>
 
               {/* Quick Items & Quantity Review */}
               <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
@@ -707,27 +818,37 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onTrackOrder(confirmedOrder.tcsTrackingId);
-                    onClose();
-                  }}
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors"
+              <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onTrackOrder(confirmedOrder.tcsTrackingId);
+                      onClose();
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold transition-colors"
+                  >
+                    Track TCS Shipment
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('bag');
+                      onClose();
+                    }}
+                    className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 text-sm font-semibold transition-colors"
+                  >
+                    Continue Shopping
+                  </button>
+                </div>
+
+                <a
+                  href={whatsappDraftUrl}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition-colors"
                 >
-                  Track TCS Shipment
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStep('bag');
-                    onClose();
-                  }}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-800 text-sm font-semibold transition-colors"
-                >
-                  Continue Shopping
-                </button>
+                  <MessageCircle className="w-4 h-4" />
+                  Send Order Receipt on WhatsApp
+                </a>
               </div>
             </div>
           )}

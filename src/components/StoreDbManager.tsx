@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import type { User } from 'firebase/auth';
 import {
   Plus,
   Trash2,
@@ -10,7 +11,12 @@ import {
   Database,
   ArrowLeft,
   ImagePlus,
+  Cloud,
+  LogIn,
+  LogOut,
+  RefreshCw,
 } from 'lucide-react';
+import { isOwnerUser, OWNER_EMAIL, signInWithGoogle, signOutUser } from '../firebase';
 import {
   DEFAULT_CATEGORIES,
   type CityRate,
@@ -29,6 +35,7 @@ import {
   deleteProduct,
   importFullDb,
   resetFullDb,
+  syncLocalCatalogToCloud,
   updateCity,
   updateOrderStatus,
   updatePaymentSettings,
@@ -37,6 +44,8 @@ import {
 
 interface StoreDbManagerProps {
   db: MismuDatabase;
+  authUser: User | null;
+  cloudSynced: boolean;
   onDbUpdated: (nextDb: MismuDatabase) => void;
   onBackToStore: () => void;
 }
@@ -64,14 +73,18 @@ const PRODUCT_IMAGE_PRESETS = [
 
 export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   db,
+  authUser,
+  cloudSynced,
   onDbUpdated,
   onBackToStore,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const ownerVerified = isOwnerUser(authUser);
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>(DEFAULT_CATEGORIES);
@@ -124,13 +137,56 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   // Payment settings draft
   const [payDraft, setPayDraft] = useState<PaymentSettings>(db.paymentSettings);
 
+  useEffect(() => {
+    setPayDraft(db.paymentSettings);
+  }, [db.paymentSettings]);
+
   // Raw JSON import draft
   const [jsonDraft, setJsonDraft] = useState('');
 
   const showToast = (msg: string) => {
     setErrorMsg('');
     setNotice(msg);
-    window.setTimeout(() => setNotice(''), 2800);
+    window.setTimeout(() => setNotice(''), 3200);
+  };
+
+  const handleOwnerLogin = async () => {
+    setErrorMsg('');
+    setAuthBusy(true);
+    try {
+      const user = await signInWithGoogle();
+      if (!isOwnerUser(user)) {
+        setErrorMsg(
+          `Signed in as ${user.email || 'user'}, lekin live Firebase sync sirf owner (${OWNER_EMAIL}) ke liye enabled hai.`
+        );
+      } else {
+        showToast('Google Owner login successful! Live Firebase sync active.');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Google Sign-In failed.';
+      if (msg.includes('unauthorized-domain')) {
+        setErrorMsg(
+          `Is website domain (${window.location.hostname}) ko Firebase Console -> Authentication -> Settings -> Authorized domains mein add karein.`
+        );
+      } else {
+        setErrorMsg(msg);
+      }
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleSyncToCloud = async () => {
+    setErrorMsg('');
+    setAuthBusy(true);
+    try {
+      await syncLocalCatalogToCloud(db);
+      showToast('All products, cities & payment settings published live to Firebase!');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to sync to Firebase.');
+    } finally {
+      setAuthBusy(false);
+    }
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
@@ -138,12 +194,15 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
     setErrorMsg('');
     const finalCategory = newProd.category.trim() || 'Makeup';
     try {
-      const nextDb = await addProduct({
-        ...newProd,
-        category: finalCategory,
-        price: Number(newProd.price),
-        stock: Number(newProd.stock),
-      });
+      const nextDb = await addProduct(
+        {
+          ...newProd,
+          category: finalCategory,
+          price: Number(newProd.price),
+          stock: Number(newProd.stock),
+        },
+        db
+      );
       onDbUpdated(nextDb);
       setNewProd({
         name: '',
@@ -154,7 +213,11 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
         tagline: '',
         image: PRODUCT_IMAGE_PRESETS[0].url,
       });
-      showToast('Product saved to Mismu database.');
+      showToast(
+        ownerVerified
+          ? 'Product saved live to Firebase for all customers!'
+          : 'Saved locally. Sign in with owner Google account above to publish live.'
+      );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to add product.');
     }
@@ -162,9 +225,13 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleUpdateProduct = async (product: Product) => {
     try {
-      const nextDb = await updateProduct(product);
+      const nextDb = await updateProduct(product, db);
       onDbUpdated(nextDb);
-      showToast(`Updated "${product.name}".`);
+      showToast(
+        ownerVerified
+          ? `Updated "${product.name}" live on Firebase.`
+          : `Updated "${product.name}" locally.`
+      );
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to update product.');
     }
@@ -172,7 +239,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleDeleteProduct = async (id: string) => {
     try {
-      const nextDb = await deleteProduct(id);
+      const nextDb = await deleteProduct(id, db);
       onDbUpdated(nextDb);
       showToast('Product removed.');
     } catch (err) {
@@ -184,11 +251,14 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
     e.preventDefault();
     setErrorMsg('');
     try {
-      const nextDb = await addCity({
-        ...newCity,
-        standardFee: Number(newCity.standardFee),
-        overnightExtra: Number(newCity.overnightExtra),
-      });
+      const nextDb = await addCity(
+        {
+          ...newCity,
+          standardFee: Number(newCity.standardFee),
+          overnightExtra: Number(newCity.overnightExtra),
+        },
+        db
+      );
       onDbUpdated(nextDb);
       setNewCity({
         city: '',
@@ -199,7 +269,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
         estimatedDays: '2–3 Working Days',
         codAvailable: true,
       });
-      showToast('City TCS rate added to database.');
+      showToast('City TCS rate added.');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to add city.');
     }
@@ -207,7 +277,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleUpdateCity = async (city: CityRate) => {
     try {
-      const nextDb = await updateCity(city);
+      const nextDb = await updateCity(city, db);
       onDbUpdated(nextDb);
       showToast(`Updated TCS delivery rate for ${city.city}.`);
     } catch (err) {
@@ -217,7 +287,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleDeleteCity = async (id: string) => {
     try {
-      const nextDb = await deleteCity(id);
+      const nextDb = await deleteCity(id, db);
       onDbUpdated(nextDb);
       showToast('City removed.');
     } catch (err) {
@@ -228,7 +298,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const handleSavePayments = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const nextDb = await updatePaymentSettings(payDraft);
+      const nextDb = await updatePaymentSettings(payDraft, db);
       onDbUpdated(nextDb);
       showToast('EasyPaisa, JazzCash & TCS settings saved.');
     } catch (err) {
@@ -238,7 +308,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleUpdateOrderStatus = async (orderId: string, status: OrderStatus) => {
     try {
-      const nextDb = await updateOrderStatus(orderId, status);
+      const nextDb = await updateOrderStatus(orderId, status, db);
       onDbUpdated(nextDb);
       showToast(`Order ${orderId} updated to "${status}".`);
     } catch (err) {
@@ -299,8 +369,8 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
               Mismu Store Database Manager
             </h1>
             <p className="text-sm text-slate-600 mt-1">
-              Edit products, city-wise TCS delivery fees, EasyPaisa &amp; JazzCash accounts, and order tracking anytime. Saved directly to{' '}
-              <span className="font-mono text-xs text-slate-800">data/mismu-db.json</span>.
+              Edit products, city-wise TCS delivery fees, EasyPaisa &amp; JazzCash accounts, and live customer orders synced with{' '}
+              <span className="font-semibold text-slate-800">Firebase Firestore Cloud</span>.
             </p>
           </div>
 
@@ -321,6 +391,86 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
               <RotateCcw className="w-3.5 h-3.5" />
               Reset Defaults
             </button>
+          </div>
+        </div>
+
+        {/* Firebase Cloud Owner Access Card */}
+        <div
+          className={`rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+            ownerVerified
+              ? 'bg-emerald-50/70 border-emerald-200'
+              : 'bg-white border-orange-200'
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                ownerVerified
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-orange-100 text-orange-600'
+              }`}
+            >
+              <Cloud className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="font-display text-sm font-bold text-slate-900">
+                {ownerVerified
+                  ? `Live Firebase Cloud Active (${authUser?.email})`
+                  : 'Firebase Cloud Owner Login Required for Live Sync'}
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                {ownerVerified
+                  ? `Har product edit, custom photo, category, city rate, aur live customer orders sab devices par sync ho rahe hain${
+                      cloudSynced ? ' (Cloud Connected)' : ''
+                    }.`
+                  : `Apne owner Google account (${OWNER_EMAIL}) se Sign In karein taake aapki changes aur naye customer orders live cloud mein save hon.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {ownerVerified ? (
+              <>
+                <button
+                  type="button"
+                  disabled={authBusy}
+                  onClick={handleSyncToCloud}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-semibold whitespace-nowrap"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Sync All to Cloud
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void signOutUser()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 whitespace-nowrap"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={authBusy}
+                  onClick={handleOwnerLogin}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 disabled:opacity-60 text-white text-xs font-semibold whitespace-nowrap"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  {authBusy ? 'Signing In...' : 'Sign in with Google'}
+                </button>
+                {authUser && (
+                  <button
+                    type="button"
+                    onClick={() => void signOutUser()}
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700"
+                  >
+                    Switch Account
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
 
@@ -1039,6 +1189,11 @@ const EditableCityRow: React.FC<{
   onDelete: (id: string) => void;
 }> = ({ city, onSave, onDelete }) => {
   const [draft, setDraft] = useState(city);
+
+  useEffect(() => {
+    setDraft(city);
+  }, [city]);
+
   return (
     <tr>
       <td className="py-3 px-4">

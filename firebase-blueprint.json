@@ -1,0 +1,300 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Cosmetics or beauty parlour item available in the Mismu catalog.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "price": {
+          "type": "number"
+        },
+        "stock": {
+          "type": "number"
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 250000
+        },
+        "sku": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "weightKg": {
+          "type": "number"
+        },
+        "featured": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "name", "category", "price", "stock", "image", "sku"]
+    },
+    "CityRate": {
+      "title": "CityRate",
+      "description": "Pakistani city TCS courier tariff and COD eligibility.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "city": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "province": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "tcsZone": {
+          "type": "string",
+          "enum": ["Metro Express", "Regional Standard", "Air Cargo", "Northern Special"]
+        },
+        "standardFee": {
+          "type": "number"
+        },
+        "overnightExtra": {
+          "type": "number"
+        },
+        "estimatedDays": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "codAvailable": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "city", "province", "tcsZone", "standardFee", "overnightExtra", "estimatedDays", "codAvailable"]
+    },
+    "PaymentSettings": {
+      "title": "PaymentSettings",
+      "description": "Merchant EasyPaisa, JazzCash, COD, and TCS free delivery threshold configuration.",
+      "type": "object",
+      "properties": {
+        "easypaisaEnabled": { "type": "boolean" },
+        "easypaisaAccountTitle": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "easypaisaAccountNumber": { "type": "string", "minLength": 1, "maxLength": 30 },
+        "jazzcashEnabled": { "type": "boolean" },
+        "jazzcashAccountTitle": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "jazzcashAccountNumber": { "type": "string", "minLength": 1, "maxLength": 30 },
+        "codEnabled": { "type": "boolean" },
+        "freeDeliveryThreshold": { "type": "number" },
+        "storeTagline": { "type": "string", "maxLength": 180 },
+        "supportPhone": { "type": "string", "maxLength": 30 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "easypaisaEnabled",
+        "easypaisaAccountTitle",
+        "easypaisaAccountNumber",
+        "jazzcashEnabled",
+        "jazzcashAccountTitle",
+        "jazzcashAccountNumber",
+        "codEnabled",
+        "freeDeliveryThreshold"
+      ]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order with PII isolated strictly to the authenticated customer and store admin.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "tcsTrackingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "customerPhone": { "type": "string", "minLength": 7, "maxLength": 30 },
+        "address": { "type": "string", "minLength": 3, "maxLength": 300 },
+        "postalCode": { "type": "string", "maxLength": 20 },
+        "cityId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "cityName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "province": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "tcsServiceTier": { "type": "string", "enum": ["standard", "overnight"] },
+        "paymentMethod": { "type": "string", "enum": ["easypaisa", "jazzcash", "cod"] },
+        "paymentAccountNumber": { "type": "string", "maxLength": 30 },
+        "paymentReference": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "paymentVerified": { "type": "boolean" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "total": { "type": "number" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Booked at Mismu Hub",
+            "Dispatched via TCS",
+            "In Transit",
+            "Out for Delivery",
+            "Delivered"
+          ]
+        },
+        "estimatedDelivery": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "id",
+        "customerUid",
+        "tcsTrackingId",
+        "customerName",
+        "customerPhone",
+        "address",
+        "cityId",
+        "cityName",
+        "province",
+        "tcsServiceTier",
+        "paymentMethod",
+        "paymentReference",
+        "paymentVerified",
+        "items",
+        "subtotal",
+        "deliveryFee",
+        "total",
+        "status",
+        "estimatedDelivery",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ShipmentTracking": {
+      "title": "ShipmentTracking",
+      "description": "Non-PII public TCS tracking document keyed by TCS tracking ID.",
+      "type": "object",
+      "properties": {
+        "tcsTrackingId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "orderId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customerUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "cityName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "province": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "tcsServiceTier": { "type": "string", "enum": ["standard", "overnight"] },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Booked at Mismu Hub",
+            "Dispatched via TCS",
+            "In Transit",
+            "Out for Delivery",
+            "Delivered"
+          ]
+        },
+        "estimatedDelivery": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "total": { "type": "number" },
+        "itemCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "tcsTrackingId",
+        "orderId",
+        "customerUid",
+        "cityName",
+        "province",
+        "tcsServiceTier",
+        "status",
+        "estimatedDelivery",
+        "total",
+        "itemCount",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Explicit store administrator marker keyed by Firebase Auth UID.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Publicly readable catalog of Mismu cosmetics and parlour products; admin-only writes."
+    },
+    "/cities/{cityId}": {
+      "schema": { "$ref": "#/entities/CityRate" },
+      "description": "Publicly readable Pakistani city TCS delivery charges; admin-only writes."
+    },
+    "/store_config/{configId}": {
+      "schema": { "$ref": "#/entities/PaymentSettings" },
+      "description": "Publicly readable EasyPaisa/JazzCash/TCS checkout settings; admin-only writes."
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "PII-isolated customer orders readable only by the placing customer or store admin."
+    },
+    "/shipment_tracking/{trackingId}": {
+      "schema": { "$ref": "#/entities/ShipmentTracking" },
+      "description": "Non-PII TCS shipment tracking record readable by exact tracking ID."
+    },
+    "/admins/{uid}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Store administrator UID lookup records."
+    }
+  }
+}

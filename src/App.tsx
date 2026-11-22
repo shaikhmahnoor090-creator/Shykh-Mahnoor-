@@ -1,7 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { onAuthStateChanged, type User } from 'firebase/auth';
 import { ShoppingBag, Search, MapPin, ArrowRight, Database } from 'lucide-react';
 import { DEFAULT_MISMU_DB } from './data/defaultDb';
-import { DEFAULT_CATEGORIES, type MismuDatabase, type Order, type Product, type ProductCategory } from './types/store';
+import { auth, isOwnerUser } from './firebase';
+import {
+  DEFAULT_CATEGORIES,
+  type MismuDatabase,
+  type Order,
+  type Product,
+  type ProductCategory,
+} from './types/store';
 import { assetUrl, formatPKR } from './utils/format';
 import { MismuLogo } from './components/MismuLogo';
 import { ProductCard } from './components/ProductCard';
@@ -11,10 +19,18 @@ import { TcsRatesAndTracker } from './components/TcsRatesAndTracker';
 import { StoreDbManager } from './components/StoreDbManager';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
-import { fetchStoreDb } from './utils/storeApi';
+import {
+  seedCloudCatalogIfEmpty,
+  subscribePublicCatalog,
+  subscribeUserOrders,
+} from './utils/storeApi';
 
 export default function App() {
   const [db, setDb] = useState<MismuDatabase>(DEFAULT_MISMU_DB);
+  const [cloudActive, setCloudActive] = useState(false);
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const seededOnceRef = useRef(false);
+
   const [view, setView] = useState<'store' | 'admin'>('store');
   const [selectedCategory, setSelectedCategory] = useState<'All' | ProductCategory>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,20 +51,72 @@ export default function App() {
   const [trackingQuery, setTrackingQuery] = useState<string | undefined>(undefined);
   const [heroImgFailed, setHeroImgFailed] = useState(false);
 
+  // Listen to Firebase Auth state
   useEffect(() => {
-    let mounted = true;
-    fetchStoreDb().then((data) => {
-      if (mounted && data && Array.isArray(data.products)) {
-        setDb(data);
-        if (data.cities.length > 0 && !data.cities.some((c) => c.id === selectedCityId)) {
-          setSelectedCityId(data.cities[0].id);
-        }
-      }
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
     });
-    return () => {
-      mounted = false;
-    };
+    return () => unsub();
   }, []);
+
+  // Subscribe to public Firestore storefront catalog, cities & payment settings
+  useEffect(() => {
+    const unsub = subscribePublicCatalog({
+      onProducts: (products, fromCloud) => {
+        if (fromCloud) setCloudActive(true);
+        setDb((prev) => ({
+          ...prev,
+          products,
+          updatedAt: new Date().toISOString(),
+        }));
+      },
+      onCities: (cities, fromCloud) => {
+        if (fromCloud) setCloudActive(true);
+        setDb((prev) => ({
+          ...prev,
+          cities,
+          updatedAt: new Date().toISOString(),
+        }));
+        if (cities.length > 0) {
+          setSelectedCityId((prevId) =>
+            cities.some((c) => c.id === prevId) ? prevId : cities[0].id
+          );
+        }
+      },
+      onPaymentSettings: (paymentSettings, fromCloud) => {
+        if (fromCloud) setCloudActive(true);
+        setDb((prev) => ({
+          ...prev,
+          paymentSettings,
+          updatedAt: new Date().toISOString(),
+        }));
+      },
+    });
+    return () => unsub();
+  }, []);
+
+  // Subscribe to Firestore orders & auto-seed initial catalog when verified owner logs in
+  useEffect(() => {
+    if (!authUser || !authUser.emailVerified) {
+      setDb((prev) => ({ ...prev, orders: DEFAULT_MISMU_DB.orders }));
+      return;
+    }
+
+    if (isOwnerUser(authUser) && !seededOnceRef.current) {
+      seededOnceRef.current = true;
+      void seedCloudCatalogIfEmpty(DEFAULT_MISMU_DB);
+    }
+
+    const unsubOrders = subscribeUserOrders(authUser, (orders) => {
+      setDb((prev) => ({
+        ...prev,
+        orders,
+        updatedAt: new Date().toISOString(),
+      }));
+    });
+
+    return () => unsubOrders();
+  }, [authUser]);
 
   useEffect(() => {
     try {
@@ -122,11 +190,10 @@ export default function App() {
   };
 
   const handleOrderCreated = (order: Order) => {
-    fetchStoreDb()
-      .then((fresh) => setDb(fresh))
-      .catch(() => {
-        setDb((prev) => ({ ...prev, orders: [order, ...prev.orders] }));
-      });
+    setDb((prev) => {
+      if (prev.orders.some((o) => o.id === order.id)) return prev;
+      return { ...prev, orders: [order, ...prev.orders] };
+    });
   };
 
   const navigateSection = (sectionId: string) => {
@@ -140,6 +207,16 @@ export default function App() {
   const handleTrackFromReceipt = (trackingId: string) => {
     setTrackingQuery(trackingId);
     navigateSection('track-order');
+  };
+
+  const handleDownloadJsonBackup = () => {
+    const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mismu-database-backup.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -215,6 +292,8 @@ export default function App() {
         {view === 'admin' ? (
           <StoreDbManager
             db={db}
+            authUser={authUser}
+            cloudSynced={cloudActive}
             onDbUpdated={(nextDb) => setDb(nextDb)}
             onBackToStore={() => setView('store')}
           />
@@ -345,12 +424,12 @@ export default function App() {
                   </div>
 
                   <div className="p-4 rounded-xl bg-white border border-slate-200">
-                    <div className="text-xs font-semibold text-slate-700">Full Store Database</div>
+                    <div className="text-xs font-semibold text-slate-700">Live Store Cloud</div>
                     <div className="font-display text-sm font-bold text-slate-900 mt-1">
-                      Edit Prices &amp; Cities Live
+                      Sync Products &amp; Orders
                     </div>
                     <div className="text-xs text-slate-500 mt-0.5">
-                      JSON backup &amp; instant updates
+                      Real-time updates on every phone
                     </div>
                   </div>
                 </div>
@@ -455,13 +534,13 @@ export default function App() {
             >
               {view === 'admin' ? 'Back to Storefront' : 'Manage Store Database'}
             </button>
-            <a
-              href="/api/db/export"
-              download="mismu-database-backup.json"
+            <button
+              type="button"
+              onClick={handleDownloadJsonBackup}
               className="hover:text-orange-600 transition-colors"
             >
               Download DB JSON
-            </a>
+            </button>
             <span className="text-slate-400">© 2026 Mismu</span>
           </div>
         </div>
@@ -491,6 +570,9 @@ export default function App() {
         selectedCityId={selectedCity?.id || ''}
         onSelectCity={(id) => setSelectedCityId(id)}
         paymentSettings={db.paymentSettings}
+        orders={db.orders}
+        products={db.products}
+        authUser={authUser}
         onOrderCreated={handleOrderCreated}
         onTrackOrder={handleTrackFromReceipt}
         initialStep={drawerInitialStep}

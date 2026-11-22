@@ -1,0 +1,296 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isVerifiedOwnerEmail() {
+      return isVerifiedUser() && request.auth.token.email == 'shaikhmahnoor090@gmail.com';
+    }
+
+    function isAdmin() {
+      return isVerifiedOwnerEmail()
+        || (isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    // 3. Entity Validation Blueprints
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'price', 'stock', 'image', 'sku'])
+        && data.keys().hasOnly([
+          'id', 'name', 'category', 'price', 'stock', 'tagline',
+          'description', 'image', 'sku', 'weightKg', 'featured', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.name is string && data.name.size() >= 1 && data.name.size() <= 140
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 60
+        && data.price is number && data.price > 0 && data.price <= 10000000
+        && data.stock is number && data.stock >= 0 && data.stock <= 100000
+        && data.image is string && data.image.size() >= 1 && data.image.size() <= 250000
+        && data.sku is string && data.sku.size() >= 1 && data.sku.size() <= 40
+        && (!('tagline' in data) || (data.tagline is string && data.tagline.size() <= 240))
+        && (!('description' in data) || (data.description is string && data.description.size() <= 1200))
+        && (!('weightKg' in data) || (data.weightKg is number && data.weightKg >= 0 && data.weightKg <= 500))
+        && (!('featured' in data) || data.featured is bool)
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidCityRate(data) {
+      return data.keys().hasAll([
+          'id', 'city', 'province', 'tcsZone', 'standardFee',
+          'overnightExtra', 'estimatedDays', 'codAvailable'
+        ])
+        && data.keys().hasOnly([
+          'id', 'city', 'province', 'tcsZone', 'standardFee',
+          'overnightExtra', 'estimatedDays', 'codAvailable', 'updatedAt'
+        ])
+        && isValidId(data.id)
+        && data.city is string && data.city.size() >= 1 && data.city.size() <= 80
+        && data.province is string && data.province.size() >= 1 && data.province.size() <= 80
+        && data.tcsZone in ['Metro Express', 'Regional Standard', 'Air Cargo', 'Northern Special']
+        && data.standardFee is number && data.standardFee >= 0 && data.standardFee <= 100000
+        && data.overnightExtra is number && data.overnightExtra >= 0 && data.overnightExtra <= 100000
+        && data.estimatedDays is string && data.estimatedDays.size() >= 1 && data.estimatedDays.size() <= 60
+        && data.codAvailable is bool
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidPaymentSettings(data) {
+      return data.keys().hasAll([
+          'easypaisaEnabled', 'easypaisaAccountTitle', 'easypaisaAccountNumber',
+          'jazzcashEnabled', 'jazzcashAccountTitle', 'jazzcashAccountNumber',
+          'codEnabled', 'freeDeliveryThreshold'
+        ])
+        && data.keys().hasOnly([
+          'easypaisaEnabled', 'easypaisaAccountTitle', 'easypaisaAccountNumber',
+          'jazzcashEnabled', 'jazzcashAccountTitle', 'jazzcashAccountNumber',
+          'codEnabled', 'freeDeliveryThreshold', 'storeTagline', 'supportPhone', 'updatedAt'
+        ])
+        && data.easypaisaEnabled is bool
+        && data.easypaisaAccountTitle is string && data.easypaisaAccountTitle.size() >= 1 && data.easypaisaAccountTitle.size() <= 100
+        && data.easypaisaAccountNumber is string && data.easypaisaAccountNumber.size() >= 1 && data.easypaisaAccountNumber.size() <= 30
+        && data.jazzcashEnabled is bool
+        && data.jazzcashAccountTitle is string && data.jazzcashAccountTitle.size() >= 1 && data.jazzcashAccountTitle.size() <= 100
+        && data.jazzcashAccountNumber is string && data.jazzcashAccountNumber.size() >= 1 && data.jazzcashAccountNumber.size() <= 30
+        && data.codEnabled is bool
+        && data.freeDeliveryThreshold is number && data.freeDeliveryThreshold >= 0 && data.freeDeliveryThreshold <= 1000000
+        && (!('storeTagline' in data) || (data.storeTagline is string && data.storeTagline.size() <= 180))
+        && (!('supportPhone' in data) || (data.supportPhone is string && data.supportPhone.size() <= 30))
+        && (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'id', 'customerUid', 'tcsTrackingId', 'customerName', 'customerPhone',
+          'address', 'cityId', 'cityName', 'province', 'tcsServiceTier',
+          'paymentMethod', 'paymentReference', 'paymentVerified', 'items',
+          'subtotal', 'deliveryFee', 'total', 'status', 'estimatedDelivery',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'customerUid', 'tcsTrackingId', 'customerName', 'customerPhone',
+          'address', 'postalCode', 'cityId', 'cityName', 'province',
+          'tcsServiceTier', 'paymentMethod', 'paymentAccountNumber', 'paymentReference',
+          'paymentVerified', 'items', 'subtotal', 'deliveryFee', 'total',
+          'status', 'estimatedDelivery', 'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.id) && data.id.size() <= 64
+        && data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128
+        && isValidId(data.tcsTrackingId) && data.tcsTrackingId.size() <= 64
+        && data.customerName is string && data.customerName.size() >= 1 && data.customerName.size() <= 120
+        && data.customerPhone is string && data.customerPhone.size() >= 7 && data.customerPhone.size() <= 30
+        && data.address is string && data.address.size() >= 3 && data.address.size() <= 300
+        && (!('postalCode' in data) || (data.postalCode is string && data.postalCode.size() <= 20))
+        && isValidId(data.cityId)
+        && data.cityName is string && data.cityName.size() >= 1 && data.cityName.size() <= 80
+        && data.province is string && data.province.size() >= 1 && data.province.size() <= 80
+        && data.tcsServiceTier in ['standard', 'overnight']
+        && data.paymentMethod in ['easypaisa', 'jazzcash', 'cod']
+        && (!('paymentAccountNumber' in data) || (data.paymentAccountNumber is string && data.paymentAccountNumber.size() <= 30))
+        && data.paymentReference is string && data.paymentReference.size() >= 1 && data.paymentReference.size() <= 60
+        && data.paymentVerified is bool
+        && data.items is list && data.items.size() >= 1 && data.items.size() <= 50 && data.items[0] is map
+        && data.subtotal is number && data.subtotal > 0 && data.subtotal <= 50000000
+        && data.deliveryFee is number && data.deliveryFee >= 0 && data.deliveryFee <= 100000
+        && data.total is number && data.total > 0 && data.total <= 50000000
+        && data.status in ['Booked at Mismu Hub', 'Dispatched via TCS', 'In Transit', 'Out for Delivery', 'Delivered']
+        && data.estimatedDelivery is string && data.estimatedDelivery.size() >= 1 && data.estimatedDelivery.size() <= 80
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidShipmentTracking(data) {
+      return data.keys().hasAll([
+          'tcsTrackingId', 'orderId', 'customerUid', 'cityName', 'province',
+          'tcsServiceTier', 'status', 'estimatedDelivery', 'total', 'itemCount',
+          'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'tcsTrackingId', 'orderId', 'customerUid', 'cityName', 'province',
+          'tcsServiceTier', 'status', 'estimatedDelivery', 'total', 'itemCount',
+          'createdAt', 'updatedAt'
+        ])
+        && isValidId(data.tcsTrackingId) && data.tcsTrackingId.size() <= 64
+        && isValidId(data.orderId) && data.orderId.size() <= 64
+        && data.customerUid is string && data.customerUid.size() >= 1 && data.customerUid.size() <= 128
+        && data.cityName is string && data.cityName.size() >= 1 && data.cityName.size() <= 80
+        && data.province is string && data.province.size() >= 1 && data.province.size() <= 80
+        && data.tcsServiceTier in ['standard', 'overnight']
+        && data.status in ['Booked at Mismu Hub', 'Dispatched via TCS', 'In Transit', 'Out for Delivery', 'Delivered']
+        && data.estimatedDelivery is string && data.estimatedDelivery.size() >= 1 && data.estimatedDelivery.size() <= 80
+        && data.total is number && data.total > 0 && data.total <= 50000000
+        && data.itemCount is number && data.itemCount >= 1 && data.itemCount <= 500
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 4. Connection Health Check Document
+    match /test/connection {
+      allow get: if true;
+      allow list, create, update, delete: if false;
+    }
+
+    // 5. Admin Lookup Records
+    match /admins/{uid} {
+      allow get: if isSignedIn() && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+
+    // 6. Storefront Products Catalog (Public read, Admin-only write)
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if resource.data.price > 0;
+      allow create: if isAdmin()
+        && isValidId(productId)
+        && isValidProduct(incoming())
+        && incoming().id == productId
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time);
+      allow update: if isAdmin()
+        && isValidId(productId)
+        && isValidProduct(incoming())
+        && incoming().id == existing().id
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'category', 'price', 'stock', 'tagline',
+          'description', 'image', 'sku', 'weightKg', 'featured', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // 7. Pakistani City TCS Delivery Rates (Public read, Admin-only write)
+    match /cities/{cityId} {
+      allow get: if isValidId(cityId);
+      allow list: if resource.data.standardFee >= 0;
+      allow create: if isAdmin()
+        && isValidId(cityId)
+        && isValidCityRate(incoming())
+        && incoming().id == cityId
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time);
+      allow update: if isAdmin()
+        && isValidId(cityId)
+        && isValidCityRate(incoming())
+        && incoming().id == existing().id
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'city', 'province', 'tcsZone', 'standardFee',
+          'overnightExtra', 'estimatedDays', 'codAvailable', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(cityId);
+    }
+
+    // 8. Store Checkout & Merchant Payment Settings (Public get, Admin-only write)
+    match /store_config/{configId} {
+      allow get: if isValidId(configId);
+      allow list: if false;
+      allow create: if isAdmin()
+        && isValidId(configId)
+        && isValidPaymentSettings(incoming())
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time);
+      allow update: if isAdmin()
+        && isValidId(configId)
+        && isValidPaymentSettings(incoming())
+        && (!('updatedAt' in incoming()) || incoming().updatedAt == request.time)
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'easypaisaEnabled', 'easypaisaAccountTitle', 'easypaisaAccountNumber',
+          'jazzcashEnabled', 'jazzcashAccountTitle', 'jazzcashAccountNumber',
+          'codEnabled', 'freeDeliveryThreshold', 'storeTagline', 'supportPhone', 'updatedAt'
+        ]);
+      allow delete: if isAdmin() && isValidId(configId);
+    }
+
+    // 9. Customer Orders (Strictly PII-isolated to placing customer or Admin)
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId)
+        && (isAdmin() || (isVerifiedUser() && existing().customerUid == request.auth.uid));
+      allow list: if isVerifiedOwnerEmail()
+        || (isVerifiedUser() && existing().customerUid == request.auth.uid);
+      allow create: if isVerifiedUser()
+        && isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().id == orderId
+        && incoming().customerUid == request.auth.uid
+        && incoming().status == 'Booked at Mismu Hub'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/cities/$(incoming().cityId))
+        && existsAfter(/databases/$(database)/documents/shipment_tracking/$(incoming().tcsTrackingId));
+      allow update: if isAdmin()
+        && isValidId(orderId)
+        && isValidOrder(incoming())
+        && incoming().id == existing().id
+        && incoming().customerUid == existing().customerUid
+        && incoming().tcsTrackingId == existing().tcsTrackingId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paymentVerified', 'updatedAt']);
+      allow delete: if isAdmin() && isValidId(orderId);
+    }
+
+    // 10. Non-PII TCS Shipment Tracking (Public exact-ID lookup; Admin list & updates)
+    match /shipment_tracking/{trackingId} {
+      allow get: if isValidId(trackingId);
+      allow list: if isVerifiedOwnerEmail();
+      allow create: if isVerifiedUser()
+        && isValidId(trackingId)
+        && isValidShipmentTracking(incoming())
+        && incoming().tcsTrackingId == trackingId
+        && incoming().customerUid == request.auth.uid
+        && incoming().status == 'Booked at Mismu Hub'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && existsAfter(/databases/$(database)/documents/orders/$(incoming().orderId));
+      allow update: if isAdmin()
+        && isValidId(trackingId)
+        && isValidShipmentTracking(incoming())
+        && incoming().tcsTrackingId == existing().tcsTrackingId
+        && incoming().orderId == existing().orderId
+        && incoming().customerUid == existing().customerUid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt', 'estimatedDelivery']);
+      allow delete: if isAdmin() && isValidId(trackingId);
+    }
+  }
+}

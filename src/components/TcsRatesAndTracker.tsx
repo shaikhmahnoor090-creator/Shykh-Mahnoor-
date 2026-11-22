@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Truck, CheckCircle2, MapPin, ArrowRight } from 'lucide-react';
 import type { CityRate, Order, OrderStatus } from '../types/store';
 import { formatPKR, formatPaymentLabel } from '../utils/format';
+import { trackShipmentById, type PublicTrackingInfo } from '../utils/storeApi';
 
 interface TcsRatesAndTrackerProps {
   cities: CityRate[];
@@ -32,21 +33,49 @@ export const TcsRatesAndTracker: React.FC<TcsRatesAndTrackerProps> = ({
   const [trackingInput, setTrackingInput] = useState(
     initialTrackingQuery || orders[0]?.tcsTrackingId || 'TCS-784920143'
   );
-  const [trackedOrder, setTrackedOrder] = useState<Order | null>(orders[0] ?? null);
+  const [trackedOrder, setTrackedOrder] = useState<PublicTrackingInfo | null>(orders[0] ?? null);
   const [trackError, setTrackError] = useState('');
+  const [searching, setSearching] = useState(false);
+
+  const performLookup = async (rawQuery: string) => {
+    const q = rawQuery.trim().toUpperCase();
+    if (!q) {
+      setTrackError('Enter a TCS Tracking ID or Mismu Order ID.');
+      setTrackedOrder(null);
+      return;
+    }
+
+    const localMatch = orders.find(
+      (o) => o.tcsTrackingId.toUpperCase() === q || o.id.toUpperCase() === q
+    );
+    if (localMatch) {
+      setTrackedOrder(localMatch);
+      setTrackError('');
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const cloudMatch = await trackShipmentById(q);
+      if (cloudMatch) {
+        setTrackedOrder(cloudMatch);
+        setTrackError('');
+      } else {
+        setTrackError(`No consignment found for "${rawQuery.trim()}".`);
+        setTrackedOrder(null);
+      }
+    } catch {
+      setTrackError(`Unable to look up "${rawQuery.trim()}". Please check the ID.`);
+      setTrackedOrder(null);
+    } finally {
+      setSearching(false);
+    }
+  };
 
   useEffect(() => {
     if (initialTrackingQuery) {
       setTrackingInput(initialTrackingQuery);
-      const match = orders.find(
-        (o) =>
-          o.tcsTrackingId.toUpperCase() === initialTrackingQuery.toUpperCase() ||
-          o.id.toUpperCase() === initialTrackingQuery.toUpperCase()
-      );
-      if (match) {
-        setTrackedOrder(match);
-        setTrackError('');
-      }
+      void performLookup(initialTrackingQuery);
     }
   }, [initialTrackingQuery, orders]);
 
@@ -63,22 +92,7 @@ export const TcsRatesAndTracker: React.FC<TcsRatesAndTrackerProps> = ({
 
   const handleTrackSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = trackingInput.trim().toUpperCase();
-    if (!q) {
-      setTrackError('Enter a TCS Tracking ID or Mismu Order ID.');
-      setTrackedOrder(null);
-      return;
-    }
-    const found = orders.find(
-      (o) => o.tcsTrackingId.toUpperCase() === q || o.id.toUpperCase() === q
-    );
-    if (!found) {
-      setTrackError(`No consignment found for "${trackingInput.trim()}".`);
-      setTrackedOrder(null);
-      return;
-    }
-    setTrackError('');
-    setTrackedOrder(found);
+    void performLookup(trackingInput);
   };
 
   const currentStepIndex = trackedOrder
@@ -217,9 +231,10 @@ export const TcsRatesAndTracker: React.FC<TcsRatesAndTrackerProps> = ({
               />
               <button
                 type="submit"
-                className="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold whitespace-nowrap shrink-0 transition-colors"
+                disabled={searching}
+                className="px-4 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-60 text-white text-sm font-semibold whitespace-nowrap shrink-0 transition-colors"
               >
-                Track
+                {searching ? 'Checking...' : 'Track'}
               </button>
             </form>
 
@@ -270,7 +285,11 @@ export const TcsRatesAndTracker: React.FC<TcsRatesAndTrackerProps> = ({
                       {formatPKR(trackedOrder.total)}
                     </div>
                     <div className="text-xs text-slate-500">
-                      {formatPaymentLabel(trackedOrder.paymentMethod)}
+                      {trackedOrder.paymentMethod
+                        ? formatPaymentLabel(trackedOrder.paymentMethod)
+                        : trackedOrder.tcsServiceTier === 'overnight'
+                        ? 'TCS Overnight Priority'
+                        : 'TCS Standard Express'}
                     </div>
                   </div>
                 </div>

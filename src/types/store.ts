@@ -66,6 +66,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  customerUid?: string;
   tcsTrackingId: string;
   createdAt: string;
   customerName: string;
