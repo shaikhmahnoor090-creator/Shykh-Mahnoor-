@@ -62,7 +62,20 @@ function readLocalDb(): MismuDatabase {
         parsed.paymentSettings &&
         Array.isArray(parsed.orders)
       ) {
-        return parsed;
+        if (parsed.cities.length < 30) {
+          const existingIds = new Set(parsed.cities.map((c) => c.id));
+          const missingCities = DEFAULT_MISMU_DB.cities.filter((c) => !existingIds.has(c.id));
+          const upgraded: MismuDatabase = {
+            ...parsed,
+            cities: sortCitiesList([...parsed.cities, ...missingCities]),
+          };
+          writeLocalDb(upgraded);
+          return upgraded;
+        }
+        return {
+          ...parsed,
+          cities: sortCitiesList(parsed.cities),
+        };
       }
     }
   } catch {
@@ -181,6 +194,51 @@ function docToProduct(data: Record<string, unknown>, docId: string): Product {
   };
 }
 
+const PRIORITY_CITY_IDS = [
+  'city-khi',
+  'city-lhr',
+  'city-isb',
+  'city-rwp',
+  'city-hyd',
+  'city-fsd',
+  'city-mux',
+  'city-skt',
+  'city-guj',
+  'city-pew',
+  'city-abt',
+  'city-bwp',
+  'city-skz',
+  'city-uet',
+];
+
+function sortCitiesList(cities: CityRate[]): CityRate[] {
+  return [...cities].sort((a, b) => {
+    const ia = PRIORITY_CITY_IDS.indexOf(a.id);
+    const ib = PRIORITY_CITY_IDS.indexOf(b.id);
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.city.localeCompare(b.city);
+  });
+}
+
+async function commitBatchedWrites(
+  ops: Array<{
+    ref: ReturnType<typeof doc>;
+    data: Record<string, unknown>;
+  }>
+): Promise<void> {
+  const CHUNK_SIZE = 400;
+  for (let i = 0; i < ops.length; i += CHUNK_SIZE) {
+    const batch = writeBatch(firestoreDb);
+    const slice = ops.slice(i, i + CHUNK_SIZE);
+    for (const op of slice) {
+      batch.set(op.ref, op.data);
+    }
+    await batch.commit();
+  }
+}
+
 function docToCity(data: Record<string, unknown>, docId: string): CityRate {
   return {
     id: String(data.id || docId),
@@ -250,10 +308,10 @@ export function subscribePublicCatalog(callbacks: {
     citiesQuery,
     (snap) => {
       if (!snap.empty) {
-        const list = snap.docs.map((d) => docToCity(d.data() as Record<string, unknown>, d.id));
-        callbacks.onCities(list, true);
+        const cloudList = snap.docs.map((d) => docToCity(d.data() as Record<string, unknown>, d.id));
+        callbacks.onCities(sortCitiesList(cloudList), true);
       } else {
-        callbacks.onCities(DEFAULT_MISMU_DB.cities, false);
+        callbacks.onCities(sortCitiesList(DEFAULT_MISMU_DB.cities), false);
       }
     },
     (error) => {
@@ -334,30 +392,38 @@ export async function seedCloudCatalogIfEmpty(sourceDb: MismuDatabase): Promise<
     );
     const settingsSnap = await getDoc(doc(firestoreDb, 'store_config', PAYMENT_CONFIG_DOC_ID));
 
-    if (!prodSnap.empty && !citySnap.empty && settingsSnap.exists()) {
-      return false;
-    }
+    const ops: Array<{ ref: ReturnType<typeof doc>; data: Record<string, unknown> }> = [];
 
-    const batch = writeBatch(firestoreDb);
     if (prodSnap.empty) {
       for (const p of sourceDb.products) {
         const clean = sanitizeProductPayload(p);
-        batch.set(doc(firestoreDb, 'products', clean.id), clean);
+        ops.push({ ref: doc(firestoreDb, 'products', clean.id), data: clean });
       }
     }
-    if (citySnap.empty) {
+
+    // Seed all Pakistan cities initially, or expand from the starter 15-city set without overwriting owner edits
+    if (citySnap.empty || citySnap.size < 30) {
+      const existingCityIds = new Set(citySnap.docs.map((d) => d.id));
       for (const c of sourceDb.cities) {
         const clean = sanitizeCityPayload(c);
-        batch.set(doc(firestoreDb, 'cities', clean.id), clean);
+        if (!existingCityIds.has(clean.id)) {
+          ops.push({ ref: doc(firestoreDb, 'cities', clean.id), data: clean });
+        }
       }
     }
+
     if (!settingsSnap.exists()) {
-      batch.set(
-        doc(firestoreDb, 'store_config', PAYMENT_CONFIG_DOC_ID),
-        sanitizePaymentPayload(sourceDb.paymentSettings)
-      );
+      ops.push({
+        ref: doc(firestoreDb, 'store_config', PAYMENT_CONFIG_DOC_ID),
+        data: sanitizePaymentPayload(sourceDb.paymentSettings),
+      });
     }
-    await batch.commit();
+
+    if (ops.length === 0) {
+      return false;
+    }
+
+    await commitBatchedWrites(ops);
     return true;
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products/cities/store_config');
@@ -369,20 +435,20 @@ export async function syncLocalCatalogToCloud(sourceDb: MismuDatabase): Promise<
     throw new Error('Sign in with owner Google account (shaikhmahnoor090@gmail.com) to publish to cloud.');
   }
   try {
-    const batch = writeBatch(firestoreDb);
+    const ops: Array<{ ref: ReturnType<typeof doc>; data: Record<string, unknown> }> = [];
     for (const p of sourceDb.products) {
       const clean = sanitizeProductPayload(p);
-      batch.set(doc(firestoreDb, 'products', clean.id), clean);
+      ops.push({ ref: doc(firestoreDb, 'products', clean.id), data: clean });
     }
     for (const c of sourceDb.cities) {
       const clean = sanitizeCityPayload(c);
-      batch.set(doc(firestoreDb, 'cities', clean.id), clean);
+      ops.push({ ref: doc(firestoreDb, 'cities', clean.id), data: clean });
     }
-    batch.set(
-      doc(firestoreDb, 'store_config', PAYMENT_CONFIG_DOC_ID),
-      sanitizePaymentPayload(sourceDb.paymentSettings)
-    );
-    await batch.commit();
+    ops.push({
+      ref: doc(firestoreDb, 'store_config', PAYMENT_CONFIG_DOC_ID),
+      data: sanitizePaymentPayload(sourceDb.paymentSettings),
+    });
+    await commitBatchedWrites(ops);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, 'products/cities/store_config');
   }
@@ -401,8 +467,10 @@ export async function fetchStoreDb(): Promise<MismuDatabase> {
       ? base.products
       : prodSnap.docs.map((d) => docToProduct(d.data() as Record<string, unknown>, d.id));
     const cities = citySnap.empty
-      ? base.cities
-      : citySnap.docs.map((d) => docToCity(d.data() as Record<string, unknown>, d.id));
+      ? sortCitiesList(base.cities)
+      : sortCitiesList(
+          citySnap.docs.map((d) => docToCity(d.data() as Record<string, unknown>, d.id))
+        );
     const paymentSettings = settingsSnap.exists()
       ? ({
           ...base.paymentSettings,

@@ -15,6 +15,7 @@ import {
   LogIn,
   LogOut,
   RefreshCw,
+  Search,
 } from 'lucide-react';
 import { isOwnerUser, OWNER_EMAIL, signInWithGoogle, signOutUser } from '../firebase';
 import {
@@ -83,8 +84,20 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
 
+  const [cityFilter, setCityFilter] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const ownerVerified = isOwnerUser(authUser);
+
+  const filteredAdminCities = useMemo(() => {
+    const q = cityFilter.trim().toLowerCase();
+    if (!q) return db.cities;
+    return db.cities.filter(
+      (c) =>
+        c.city.toLowerCase().includes(q) ||
+        c.province.toLowerCase().includes(q) ||
+        c.tcsZone.toLowerCase().includes(q)
+    );
+  }, [db.cities, cityFilter]);
 
   const availableCategories = useMemo(() => {
     const set = new Set<string>(DEFAULT_CATEGORIES);
@@ -826,9 +839,24 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
             </form>
 
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70">
+                <div className="text-xs font-semibold text-slate-700">
+                  Showing {filteredAdminCities.length} of {db.cities.length} Pakistani Cities
+                </div>
+                <div className="relative sm:w-64">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={cityFilter}
+                    onChange={(e) => setCityFilter(e.target.value)}
+                    placeholder="Shehar ya province search karein..."
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </div>
+              <div className="overflow-x-auto max-h-[540px] overflow-y-auto">
                 <table className="w-full text-left border-collapse text-sm">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
+                  <thead className="bg-slate-50 sticky top-0 border-b border-slate-200 text-xs font-semibold text-slate-600">
                     <tr>
                       <th className="py-3 px-4">City / Province</th>
                       <th className="py-3 px-4">Standard TCS (PKR)</th>
@@ -839,7 +867,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {db.cities.map((city) => (
+                    {filteredAdminCities.map((city) => (
                       <EditableCityRow
                         key={city.id}
                         city={city}
