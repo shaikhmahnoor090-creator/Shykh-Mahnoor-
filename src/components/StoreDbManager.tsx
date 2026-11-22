@@ -520,7 +520,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
             [
               { id: 'products', label: `Products (${db.products.length})` },
               { id: 'cities', label: `City TCS Rates (${db.cities.length})` },
-              { id: 'payments', label: 'EasyPaisa & JazzCash' },
+              { id: 'payments', label: 'EasyPaisa, JazzCash & COD' },
               { id: 'orders', label: `Orders (${db.orders.length})` },
               { id: 'json', label: 'Raw JSON / Import' },
             ] as const
@@ -985,15 +985,39 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
               </div>
             </div>
 
-            <div className="pt-1">
-              <label className="inline-flex items-center gap-2.5 text-sm font-medium text-slate-800 cursor-pointer">
+            <div
+              className={`p-4 rounded-xl border transition-colors ${
+                payDraft.codEnabled
+                  ? 'bg-orange-50/70 border-orange-300'
+                  : 'bg-slate-50 border-slate-200'
+              }`}
+            >
+              <label className="flex items-center justify-between gap-4 cursor-pointer">
+                <div>
+                  <div className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <span>TCS Cash on Delivery (COD)</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        payDraft.codEnabled
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      {payDraft.codEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-1">
+                    {payDraft.codEnabled
+                      ? 'Abhi COD ON hai. Untick karke OFF karein aur Save dabayein agar aap sirf EasyPaisa / JazzCash advance lena chahti hain.'
+                      : 'Abhi COD OFF hai — customers sirf EasyPaisa ya JazzCash se advance pay karke order kar sakte hain.'}
+                  </p>
+                </div>
                 <input
                   type="checkbox"
                   checked={payDraft.codEnabled}
                   onChange={(e) => setPayDraft({ ...payDraft, codEnabled: e.target.checked })}
-                  className="w-4 h-4 accent-orange-600"
+                  className="w-5 h-5 accent-orange-600 shrink-0"
                 />
-                Enable TCS Cash on Delivery (COD) Storewide
               </label>
             </div>
 
