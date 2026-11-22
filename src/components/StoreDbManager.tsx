@@ -49,12 +49,14 @@ const ORDER_STATUSES: OrderStatus[] = [
 ];
 
 const PRODUCT_IMAGE_PRESETS = [
-  { label: 'Pour-Over Kettle', url: '/src/assets/images/product_ceramic_kettle_1795271073442.jpg' },
-  { label: 'Botanical Serum', url: '/src/assets/images/product_saffron_serum_1795271073475.jpg' },
-  { label: 'Leather Tote', url: '/src/assets/images/product_leather_tote_1795271074176.jpg' },
-  { label: 'Brass Lamp', url: '/src/assets/images/product_brass_lamp_1795271073444.jpg' },
-  { label: 'Linen Room Mist', url: '/src/assets/images/product_oud_mist_1795271074056.jpg' },
-  { label: 'Wireless Audio', url: '/src/assets/images/product_wireless_audio_1795271073537.jpg' },
+  { label: 'Velvet Lipstick Trio', url: '/src/assets/images/product_velvet_lipstick_1795340939244.jpg' },
+  { label: 'Bridal Glow Palette', url: '/src/assets/images/product_bridal_palette_1795340939817.jpg' },
+  { label: 'Silk Matte Foundation', url: '/src/assets/images/product_hydra_foundation_1795340970272.jpg' },
+  { label: '24K Parlour Facial Kit', url: '/src/assets/images/product_parlour_facial_kit_1795340938664.jpg' },
+  { label: 'Zafraan Radiance Serum', url: '/src/assets/images/product_saffron_serum_1795271073475.jpg' },
+  { label: 'Keratin Mask & Serum', url: '/src/assets/images/product_keratin_haircare_1795340940009.jpg' },
+  { label: '12-Piece Brush Set', url: '/src/assets/images/product_makeup_brushes_1795340939136.jpg' },
+  { label: 'Salon Hair Dryer & Styler', url: '/src/assets/images/product_salon_styler_1795340939825.jpg' },
 ];
 
 export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
@@ -69,8 +71,8 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   // New Product form
   const [newProd, setNewProd] = useState({
     name: '',
-    category: 'Home & Living' as ProductCategory,
-    price: '3200',
+    category: 'Makeup' as ProductCategory,
+    price: '2400',
     stock: '20',
     sku: '',
     tagline: '',
@@ -112,8 +114,8 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
       onDbUpdated(nextDb);
       setNewProd({
         name: '',
-        category: 'Home & Living',
-        price: '3200',
+        category: 'Makeup',
+        price: '2400',
         stock: '20',
         sku: '',
         tagline: '',
@@ -386,9 +388,10 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   }
                   className="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
                 >
-                  <option value="Home & Living">Home &amp; Living</option>
+                  <option value="Makeup">Makeup</option>
                   <option value="Skincare">Skincare</option>
-                  <option value="Carry & Tech">Carry &amp; Tech</option>
+                  <option value="Hair & Salon">Hair &amp; Salon</option>
+                  <option value="Parlour Tools">Parlour Tools</option>
                 </select>
                 <input
                   type="number"
@@ -423,7 +426,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
-                  placeholder="Short tagline (e.g. Handmade terracotta tea set)"
+                  placeholder="Short tagline (e.g. Waterproof bridal kohl eyeliner)"
                   value={newProd.tagline}
                   onChange={(e) => setNewProd({ ...newProd, tagline: e.target.value })}
                   className="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
@@ -800,9 +803,10 @@ const EditableProductRow: React.FC<{
           onChange={(e) => setDraft({ ...draft, category: e.target.value as ProductCategory })}
           className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg"
         >
-          <option value="Home & Living">Home &amp; Living</option>
+          <option value="Makeup">Makeup</option>
           <option value="Skincare">Skincare</option>
-          <option value="Carry & Tech">Carry &amp; Tech</option>
+          <option value="Hair & Salon">Hair &amp; Salon</option>
+          <option value="Parlour Tools">Parlour Tools</option>
         </select>
       </td>
       <td className="py-3 px-4">

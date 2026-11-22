@@ -1,6 +1,6 @@
 {
   "name": "Mismu",
-  "description": "Mismu — Bright modern retail store with EasyPaisa, JazzCash, TCS courier tracking, city-wise delivery charges, and full editable store database.",
+  "description": "Mismu — Bright Cosmetics & Beauty Parlour store with EasyPaisa, JazzCash, TCS courier tracking, city-wise delivery charges, and full editable store database.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

@@ -1,4 +1,4 @@
-export type ProductCategory = 'Home & Living' | 'Skincare' | 'Carry & Tech';
+export type ProductCategory = 'Makeup' | 'Skincare' | 'Hair & Salon' | 'Parlour Tools';
 
 export interface Product {
   id: string;

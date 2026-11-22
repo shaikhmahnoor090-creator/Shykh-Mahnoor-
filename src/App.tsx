@@ -15,9 +15,10 @@ import { fetchStoreDb } from './utils/storeApi';
 
 const CATEGORIES: Array<'All' | ProductCategory> = [
   'All',
-  'Home & Living',
+  'Makeup',
   'Skincare',
-  'Carry & Tech',
+  'Hair & Salon',
+  'Parlour Tools',
 ];
 
 export default function App() {
@@ -29,7 +30,7 @@ export default function App() {
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
-      const saved = window.localStorage.getItem('mismu_cart_v1');
+      const saved = window.localStorage.getItem('mismu_cart_v2');
       return saved ? (JSON.parse(saved) as CartItem[]) : [];
     } catch {
       return [];
@@ -59,7 +60,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem('mismu_cart_v1', JSON.stringify(cart));
+      window.localStorage.setItem('mismu_cart_v2', JSON.stringify(cart));
     } catch {
       // Ignore storage quota errors
     }
@@ -233,10 +234,10 @@ export default function App() {
                         textWrap: 'balance',
                       }}
                     >
-                      Bright everyday essentials, delivered to your city.
+                      Cosmetics &amp; beauty parlour essentials, delivered nationwide.
                     </h1>
                     <p className="text-base text-slate-600 max-w-xl leading-relaxed mb-7">
-                      Shop curated homeware, botanical skincare, and modern carry goods at Mismu. Pay effortlessly with EasyPaisa, JazzCash, or Cash on Delivery with transparent city-by-city TCS shipping rates.
+                      Shop original makeup, skincare, haircare, and salon tools at Mismu. Pay effortlessly with EasyPaisa, JazzCash, or Cash on Delivery with transparent city-by-city TCS shipping rates.
                     </p>
 
                     <div className="flex flex-wrap items-center gap-3 mb-6">
@@ -295,8 +296,8 @@ export default function App() {
                     <div className="h-full min-h-[280px] lg:min-h-[400px] rounded-2xl overflow-hidden border border-slate-200 bg-slate-100">
                       {!heroImgFailed ? (
                         <img
-                          src={assetUrl('/src/assets/images/hero_mismu_lifestyle_1795271074892.jpg')}
-                          alt="Mismu bright lifestyle collection on travertine table"
+                          src={assetUrl('/src/assets/images/hero_mismu_cosmetics_1795340937400.jpg')}
+                          alt="Mismu cosmetics and beauty parlour essentials collection"
                           referrerPolicy="no-referrer"
                           onError={() => setHeroImgFailed(true)}
                           className="w-full h-full object-cover"
@@ -406,7 +407,7 @@ export default function App() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-5">
                     {filteredProducts.map((product) => (
                       <ProductCard
                         key={product.id}

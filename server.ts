@@ -147,12 +147,12 @@ async function startServer() {
       stock: typeof body.stock === 'number' && body.stock >= 0 ? Math.round(body.stock) : 10,
       sku: body.sku?.trim() || `MSM-${Math.floor(100 + Math.random() * 900)}`,
       weightKg: typeof body.weightKg === 'number' && body.weightKg > 0 ? body.weightKg : 0.5,
-      tagline: body.tagline?.trim() || 'Curated everyday essential from Mismu.',
+      tagline: body.tagline?.trim() || 'Curated cosmetics & beauty parlour essential from Mismu.',
       description:
         body.description?.trim() ||
-        'Crafted for everyday utility and bright living, dispatched nationwide with TCS tracking.',
+        'Crafted for daily beauty routines and salon professionals, dispatched nationwide with TCS tracking.',
       image:
-        body.image?.trim() || '/src/assets/images/product_ceramic_kettle_1795271073442.jpg',
+        body.image?.trim() || '/src/assets/images/product_velvet_lipstick_1795340939244.jpg',
       featured: true,
     };
     db.products.unshift(newProduct);

@@ -11,7 +11,7 @@ import type {
 } from '../types/store';
 import { computeDeliveryFee } from './format';
 
-const LOCAL_DB_KEY = 'mismu_store_db_v1';
+const LOCAL_DB_KEY = 'mismu_store_db_v2';
 
 function readLocalDb(): MismuDatabase {
   try {
@@ -173,15 +173,18 @@ export async function addProduct(product: Partial<Product>): Promise<MismuDataba
   const db = readLocalDb();
   db.products.unshift({
     id: `prod-${Date.now().toString(36)}`,
-    name: product.name?.trim() || 'Mismu Product',
-    category: product.category || 'Home & Living',
+    name: product.name?.trim() || 'Mismu Beauty Item',
+    category: product.category || 'Makeup',
     price: Math.max(1, Math.round(Number(product.price) || 1000)),
     stock: Math.max(0, Math.round(Number(product.stock) || 10)),
     sku: product.sku?.trim() || `MSM-${Math.floor(100 + Math.random() * 900)}`,
-    weightKg: 0.5,
-    tagline: product.tagline?.trim() || 'Curated everyday essential from Mismu.',
-    description: product.description?.trim() || 'Crafted for everyday utility and bright living.',
-    image: product.image?.trim() || '/src/assets/images/product_ceramic_kettle_1795271073442.jpg',
+    weightKg: 0.35,
+    tagline: product.tagline?.trim() || 'Curated cosmetics & beauty parlour essential from Mismu.',
+    description:
+      product.description?.trim() ||
+      'Crafted for daily beauty routines and salon professionals across Pakistan.',
+    image:
+      product.image?.trim() || '/src/assets/images/product_velvet_lipstick_1795340939244.jpg',
     featured: true,
   });
   return writeLocalDb(db);
