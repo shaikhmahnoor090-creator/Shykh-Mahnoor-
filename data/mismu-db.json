@@ -1,0 +1,355 @@
+{
+  "updatedAt": "2026-11-22T10:05:09.268Z",
+  "paymentSettings": {
+    "easypaisaEnabled": true,
+    "easypaisaAccountTitle": "Mismu Retail (Pvt) Ltd",
+    "easypaisaAccountNumber": "0345-8924110",
+    "jazzcashEnabled": true,
+    "jazzcashAccountTitle": "Mismu Retail (Pvt) Ltd",
+    "jazzcashAccountNumber": "0301-7459203",
+    "codEnabled": true,
+    "freeDeliveryThreshold": 6000,
+    "storeTagline": "Cosmetics & Beauty Parlour Essentials · Delivered via TCS Across Pakistan",
+    "supportPhone": "0345-8924110"
+  },
+  "products": [
+    {
+      "id": "prod-lipstick-01",
+      "name": "Noor Matte Velvet Lipstick Trio",
+      "category": "Makeup",
+      "price": 2150,
+      "stock": 36,
+      "sku": "MSM-MK-101",
+      "weightKg": 0.18,
+      "featured": true,
+      "tagline": "Long-wear coral, terracotta rose & soft nude velvet lipsticks.",
+      "description": "Creamy high-pigment matte lipsticks enriched with vitamin E and shea butter. Non-drying 12-hour formula suited for everyday wear and bridal touch-ups.",
+      "image": "/src/assets/images/product_velvet_lipstick_1795340939244.jpg"
+    },
+    {
+      "id": "prod-palette-02",
+      "name": "Bridal Radiance 12-Shade Palette",
+      "category": "Makeup",
+      "price": 3850,
+      "stock": 24,
+      "sku": "MSM-MK-108",
+      "weightKg": 0.32,
+      "featured": true,
+      "tagline": "Rose-gold shimmer, bronze foil & warm matte bridal eyeshadows.",
+      "description": "Blendable 12-pan eyeshadow and glow palette crafted for Pakistani bridal and party makeup looks. Zero-fallout buttery mattes paired with luminous metallic shimmers.",
+      "image": "/src/assets/images/product_bridal_palette_1795340939817.jpg"
+    },
+    {
+      "id": "prod-foundation-03",
+      "name": "Silk Matte Foundation & Compact",
+      "category": "Makeup",
+      "price": 3250,
+      "stock": 28,
+      "sku": "MSM-MK-114",
+      "weightKg": 0.28,
+      "featured": true,
+      "tagline": "24-hour full-coverage liquid foundation with pressed powder.",
+      "description": "Sweat-resistant satin-matte base duo that blurs pores and controls shine in humid weather without caking or flashback in flash photography.",
+      "image": "/src/assets/images/product_hydra_foundation_1795340970272.jpg"
+    },
+    {
+      "id": "prod-facial-04",
+      "name": "Glow Parlour 24K Gold Facial Kit",
+      "category": "Skincare",
+      "price": 4950,
+      "stock": 19,
+      "sku": "MSM-SK-201",
+      "weightKg": 0.75,
+      "featured": true,
+      "tagline": "Vitamin C cleanser, gold renewal cream & rose quartz roller.",
+      "description": "Complete salon-grade brightening facial trio designed for parlour treatments and home glow sessions. Helps refine skin texture and boost natural radiance.",
+      "image": "/src/assets/images/product_parlour_facial_kit_1795340938664.jpg"
+    },
+    {
+      "id": "prod-serum-05",
+      "name": "Zafraan Botanical Radiance Serum",
+      "category": "Skincare",
+      "price": 2950,
+      "stock": 34,
+      "sku": "MSM-SK-204",
+      "weightKg": 0.25,
+      "featured": true,
+      "tagline": "Cold-pressed rosehip, saffron extract & vitamin E facial oil.",
+      "description": "Lightweight fast-absorbing botanical serum formulated for bright, hydrated skin before makeup prep or overnight recovery.",
+      "image": "/src/assets/images/product_saffron_serum_1795271073475.jpg"
+    },
+    {
+      "id": "prod-keratin-06",
+      "name": "Revive Salon Keratin Mask & Serum",
+      "category": "Hair & Salon",
+      "price": 3450,
+      "stock": 22,
+      "sku": "MSM-HS-305",
+      "weightKg": 0.65,
+      "featured": true,
+      "tagline": "Deep repair keratin hair mask jar & argan smoothing serum.",
+      "description": "Parlour-strength frizz control duo that seals split ends, restores protein bounce after heat styling or colouring, and leaves salon-soft shine.",
+      "image": "/src/assets/images/product_keratin_haircare_1795340940009.jpg"
+    },
+    {
+      "id": "prod-brushes-07",
+      "name": "Pro 12-Piece Bridal Brush Set",
+      "category": "Parlour Tools",
+      "price": 2750,
+      "stock": 30,
+      "sku": "MSM-PT-402",
+      "weightKg": 0.35,
+      "featured": true,
+      "tagline": "Ultra-soft synthetic bristles with champagne-gold ferrules.",
+      "description": "Essential beauty parlour brush collection covering foundation stippling, contour, blush, highlighter, eyeliner, and seamless eyeshadow blending.",
+      "image": "/src/assets/images/product_makeup_brushes_1795340939136.jpg"
+    },
+    {
+      "id": "prod-styler-08",
+      "name": "Aura Ionic Hair Dryer & Styler",
+      "category": "Parlour Tools",
+      "price": 8400,
+      "stock": 12,
+      "sku": "MSM-PT-410",
+      "weightKg": 1.25,
+      "featured": true,
+      "tagline": "2200W salon ionic blow dryer & ceramic straightening iron.",
+      "description": "Heavy-duty beauty parlour styling combo featuring fast-dry ionic airflow, cool-shot lock, and floating ceramic plates for sleek bridal blowouts.",
+      "image": "/src/assets/images/product_salon_styler_1795340939825.jpg"
+    }
+  ],
+  "cities": [
+    {
+      "id": "city-khi",
+      "city": "Karachi",
+      "province": "Sindh",
+      "tcsZone": "Metro Express",
+      "standardFee": 180,
+      "overnightExtra": 120,
+      "estimatedDays": "1–2 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-lhr",
+      "city": "Lahore",
+      "province": "Punjab",
+      "tcsZone": "Metro Express",
+      "standardFee": 220,
+      "overnightExtra": 140,
+      "estimatedDays": "1–2 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-isb",
+      "city": "Islamabad",
+      "province": "ICT",
+      "tcsZone": "Metro Express",
+      "standardFee": 250,
+      "overnightExtra": 150,
+      "estimatedDays": "1–2 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-rwp",
+      "city": "Rawalpindi",
+      "province": "Punjab",
+      "tcsZone": "Metro Express",
+      "standardFee": 250,
+      "overnightExtra": 150,
+      "estimatedDays": "1–2 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-hyd",
+      "city": "Hyderabad",
+      "province": "Sindh",
+      "tcsZone": "Regional Standard",
+      "standardFee": 210,
+      "overnightExtra": 140,
+      "estimatedDays": "1–2 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-fsd",
+      "city": "Faisalabad",
+      "province": "Punjab",
+      "tcsZone": "Regional Standard",
+      "standardFee": 260,
+      "overnightExtra": 160,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-mux",
+      "city": "Multan",
+      "province": "Punjab",
+      "tcsZone": "Regional Standard",
+      "standardFee": 280,
+      "overnightExtra": 170,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-skt",
+      "city": "Sialkot",
+      "province": "Punjab",
+      "tcsZone": "Regional Standard",
+      "standardFee": 260,
+      "overnightExtra": 160,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-guj",
+      "city": "Gujranwala",
+      "province": "Punjab",
+      "tcsZone": "Regional Standard",
+      "standardFee": 250,
+      "overnightExtra": 150,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-pew",
+      "city": "Peshawar",
+      "province": "Khyber Pakhtunkhwa",
+      "tcsZone": "Regional Standard",
+      "standardFee": 300,
+      "overnightExtra": 180,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-abt",
+      "city": "Abbottabad",
+      "province": "Khyber Pakhtunkhwa",
+      "tcsZone": "Regional Standard",
+      "standardFee": 320,
+      "overnightExtra": 190,
+      "estimatedDays": "2–4 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-bwp",
+      "city": "Bahawalpur",
+      "province": "Punjab",
+      "tcsZone": "Regional Standard",
+      "standardFee": 310,
+      "overnightExtra": 180,
+      "estimatedDays": "2–4 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-skz",
+      "city": "Sukkur",
+      "province": "Sindh",
+      "tcsZone": "Regional Standard",
+      "standardFee": 290,
+      "overnightExtra": 170,
+      "estimatedDays": "2–3 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-uet",
+      "city": "Quetta",
+      "province": "Balochistan",
+      "tcsZone": "Air Cargo",
+      "standardFee": 380,
+      "overnightExtra": 220,
+      "estimatedDays": "3–4 Working Days",
+      "codAvailable": true
+    },
+    {
+      "id": "city-gil",
+      "city": "Gilgit & Skardu",
+      "province": "Gilgit-Baltistan",
+      "tcsZone": "Northern Special",
+      "standardFee": 490,
+      "overnightExtra": 280,
+      "estimatedDays": "4–6 Working Days",
+      "codAvailable": false
+    }
+  ],
+  "orders": [
+    {
+      "id": "MSM-4821",
+      "tcsTrackingId": "TCS-784920143",
+      "createdAt": "2026-11-20T10:15:00.000Z",
+      "customerName": "Ayesha Siddiqui",
+      "customerPhone": "0321-4589012",
+      "address": "House 14-B, Street 6, DHA Phase 5",
+      "postalCode": "54792",
+      "cityId": "city-lhr",
+      "cityName": "Lahore",
+      "province": "Punjab",
+      "tcsServiceTier": "standard",
+      "paymentMethod": "easypaisa",
+      "paymentAccountNumber": "0345-4589012",
+      "paymentReference": "EP-89420193",
+      "paymentVerified": true,
+      "items": [
+        {
+          "productId": "prod-palette-02",
+          "name": "Bridal Radiance 12-Shade Palette",
+          "sku": "MSM-MK-108",
+          "price": 3850,
+          "quantity": 1,
+          "image": "/src/assets/images/product_bridal_palette_1795340939817.jpg"
+        },
+        {
+          "productId": "prod-lipstick-01",
+          "name": "Noor Matte Velvet Lipstick Trio",
+          "sku": "MSM-MK-101",
+          "price": 2150,
+          "quantity": 1,
+          "image": "/src/assets/images/product_velvet_lipstick_1795340939244.jpg"
+        }
+      ],
+      "subtotal": 6000,
+      "deliveryFee": 0,
+      "total": 6000,
+      "status": "Out for Delivery",
+      "estimatedDelivery": "1–2 Working Days"
+    },
+    {
+      "id": "MSM-4819",
+      "tcsTrackingId": "TCS-784920891",
+      "createdAt": "2026-11-19T14:40:00.000Z",
+      "customerName": "Hina Salon & Studio",
+      "customerPhone": "0300-9123456",
+      "address": "Shop 4, F-10 Markaz Beauty Arcade",
+      "postalCode": "44000",
+      "cityId": "city-isb",
+      "cityName": "Islamabad",
+      "province": "ICT",
+      "tcsServiceTier": "overnight",
+      "paymentMethod": "jazzcash",
+      "paymentAccountNumber": "0300-9123456",
+      "paymentReference": "JC-73219405",
+      "paymentVerified": true,
+      "items": [
+        {
+          "productId": "prod-facial-04",
+          "name": "Glow Parlour 24K Gold Facial Kit",
+          "sku": "MSM-SK-201",
+          "price": 4950,
+          "quantity": 1,
+          "image": "/src/assets/images/product_parlour_facial_kit_1795340938664.jpg"
+        },
+        {
+          "productId": "prod-brushes-07",
+          "name": "Pro 12-Piece Bridal Brush Set",
+          "sku": "MSM-PT-402",
+          "price": 2750,
+          "quantity": 1,
+          "image": "/src/assets/images/product_makeup_brushes_1795340939136.jpg"
+        }
+      ],
+      "subtotal": 7700,
+      "deliveryFee": 150,
+      "total": 7850,
+      "status": "In Transit",
+      "estimatedDelivery": "Next-Day TCS Priority"
+    }
+  ]
+}

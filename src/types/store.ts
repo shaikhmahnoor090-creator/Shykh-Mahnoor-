@@ -1,4 +1,11 @@
-export type ProductCategory = 'Makeup' | 'Skincare' | 'Hair & Salon' | 'Parlour Tools';
+export const DEFAULT_CATEGORIES = [
+  'Makeup',
+  'Skincare',
+  'Hair & Salon',
+  'Parlour Tools',
+] as const;
+
+export type ProductCategory = string;
 
 export interface Product {
   id: string;

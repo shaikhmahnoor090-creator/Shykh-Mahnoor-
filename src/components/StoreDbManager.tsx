@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Plus,
   Trash2,
@@ -9,16 +9,19 @@ import {
   Check,
   Database,
   ArrowLeft,
+  ImagePlus,
 } from 'lucide-react';
-import type {
-  CityRate,
-  MismuDatabase,
-  OrderStatus,
-  PaymentSettings,
-  Product,
-  ProductCategory,
+import {
+  DEFAULT_CATEGORIES,
+  type CityRate,
+  type MismuDatabase,
+  type OrderStatus,
+  type PaymentSettings,
+  type Product,
+  type ProductCategory,
 } from '../types/store';
-import { formatPKR, formatPaymentLabel } from '../utils/format';
+import { assetUrl, formatPKR, formatPaymentLabel } from '../utils/format';
+import { compressImageFile } from '../utils/imageUpload';
 import {
   addCity,
   addProduct,
@@ -68,6 +71,18 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [useCustomCat, setUseCustomCat] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const availableCategories = useMemo(() => {
+    const set = new Set<string>(DEFAULT_CATEGORIES);
+    for (const p of db.products) {
+      const c = p.category?.trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set);
+  }, [db.products]);
+
   // New Product form
   const [newProd, setNewProd] = useState({
     name: '',
@@ -78,6 +93,23 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
     tagline: '',
     image: PRODUCT_IMAGE_PRESETS[0].url,
   });
+
+  const handleNewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErrorMsg('');
+    setUploadingPhoto(true);
+    try {
+      const compressed = await compressImageFile(file);
+      setNewProd((prev) => ({ ...prev, image: compressed }));
+      showToast('Photo uploaded! Now click Add Product to save.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to process photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   // New City form
   const [newCity, setNewCity] = useState({
@@ -105,22 +137,25 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    const finalCategory = newProd.category.trim() || 'Makeup';
     try {
       const nextDb = await addProduct({
         ...newProd,
+        category: finalCategory,
         price: Number(newProd.price),
         stock: Number(newProd.stock),
       });
       onDbUpdated(nextDb);
       setNewProd({
         name: '',
-        category: 'Makeup',
+        category: finalCategory,
         price: '2400',
         stock: '20',
         sku: '',
         tagline: '',
         image: PRODUCT_IMAGE_PRESETS[0].url,
       });
+      setUseCustomCat(false);
       showToast('Product saved to Mismu database.');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to add product.');
@@ -295,10 +330,10 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
         <div className="bg-orange-50/70 border border-orange-200/80 rounded-2xl p-5 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-700">
           <div>
             <div className="font-display font-bold text-slate-900 mb-1">
-              1. Products &amp; Prices Badalna
+              1. Apni Pic, Category &amp; Price Add Karein
             </div>
             <p>
-              <strong>Products</strong> tab mein kisi bhi item ka naam, price (PKR), ya stock edit karke <strong>Save</strong> dabayein, ya upar form se naya product add karein.
+              <strong>Products</strong> tab mein <strong>Upload Photo</strong> dabaa kar phone se apni tasweer lagayein, <strong>+ Add Custom Category</strong> se apni category banayein, aur price set karke <strong>Save / Add Product</strong> karein.
             </p>
           </div>
           <div>
@@ -372,57 +407,161 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
               <h2 className="font-display text-base font-bold text-slate-900">
                 Add New Product
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
-                <input
-                  type="text"
-                  required
-                  placeholder="Product Name"
-                  value={newProd.name}
-                  onChange={(e) => setNewProd({ ...newProd, name: e.target.value })}
-                  className="lg:col-span-2 px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
-                />
-                <select
-                  value={newProd.category}
-                  onChange={(e) =>
-                    setNewProd({ ...newProd, category: e.target.value as ProductCategory })
-                  }
-                  className="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
-                >
-                  <option value="Makeup">Makeup</option>
-                  <option value="Skincare">Skincare</option>
-                  <option value="Hair & Salon">Hair &amp; Salon</option>
-                  <option value="Parlour Tools">Parlour Tools</option>
-                </select>
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  placeholder="Price (PKR)"
-                  value={newProd.price}
-                  onChange={(e) => setNewProd({ ...newProd, price: e.target.value })}
-                  className="px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
-                />
-                <input
-                  type="number"
-                  required
-                  min={0}
-                  placeholder="Stock"
-                  value={newProd.stock}
-                  onChange={(e) => setNewProd({ ...newProd, stock: e.target.value })}
-                  className="px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
-                />
-                <select
-                  value={newProd.image}
-                  onChange={(e) => setNewProd({ ...newProd, image: e.target.value })}
-                  className="px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
-                >
-                  {PRODUCT_IMAGE_PRESETS.map((img) => (
-                    <option key={img.url} value={img.url}>
-                      {img.label}
-                    </option>
-                  ))}
-                </select>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="lg:col-span-2">
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Product Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Huda Bridal Matte Lip Kit"
+                    value={newProd.name}
+                    onChange={(e) => setNewProd({ ...newProd, name: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Category (Apni Marzi ki Banayein)
+                  </label>
+                  {!useCustomCat ? (
+                    <select
+                      value={newProd.category}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setUseCustomCat(true);
+                          setNewProd({ ...newProd, category: '' });
+                        } else {
+                          setNewProd({ ...newProd, category: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
+                    >
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ Add Custom Category...</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <input
+                        type="text"
+                        required
+                        autoFocus
+                        placeholder="Type category (e.g. Nails)"
+                        value={newProd.category}
+                        onChange={(e) => setNewProd({ ...newProd, category: e.target.value })}
+                        className="flex-1 min-w-0 px-3 py-2 text-sm bg-white border border-orange-400 rounded-lg focus:outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUseCustomCat(false);
+                          setNewProd({ ...newProd, category: availableCategories[0] || 'Makeup' });
+                        }}
+                        className="px-2.5 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 whitespace-nowrap"
+                      >
+                        List
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Price (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      placeholder="2400"
+                      value={newProd.price}
+                      onChange={(e) => setNewProd({ ...newProd, price: e.target.value })}
+                      className="w-full px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      Stock
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={0}
+                      placeholder="20"
+                      value={newProd.stock}
+                      onChange={(e) => setNewProd({ ...newProd, stock: e.target.value })}
+                      className="w-full px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
+                    />
+                  </div>
+                </div>
               </div>
+
+              {/* Photo Upload + Preset / Link Picker */}
+              <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-col md:flex-row items-start md:items-center gap-4">
+                <img
+                  src={assetUrl(newProd.image)}
+                  alt="Product preview"
+                  referrerPolicy="no-referrer"
+                  className="w-20 h-16 rounded-lg object-cover border border-slate-200 bg-white shrink-0"
+                />
+
+                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-center">
+                  <label className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer whitespace-nowrap">
+                    <ImagePlus className="w-4 h-4" />
+                    <span>{uploadingPhoto ? 'Uploading...' : 'Upload Own Photo'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleNewPhotoUpload}
+                      className="sr-only"
+                    />
+                  </label>
+
+                  <select
+                    aria-label="Choose preset photo"
+                    value={
+                      PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image)
+                        ? newProd.image
+                        : '__custom__'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value !== '__custom__') {
+                        setNewProd({ ...newProd, image: e.target.value });
+                      }
+                    }}
+                    className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
+                  >
+                    {!PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image) && (
+                      <option value="__custom__">Custom Photo Selected</option>
+                    )}
+                    {PRODUCT_IMAGE_PRESETS.map((img) => (
+                      <option key={img.url} value={img.url}>
+                        Preset: {img.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="text"
+                    placeholder="Or paste image URL (https://...)"
+                    value={newProd.image.startsWith('data:') ? '' : newProd.image}
+                    onChange={(e) => {
+                      const val = e.target.value.trim();
+                      if (val) setNewProd({ ...newProd, image: val });
+                    }}
+                    className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-3">
                 <input
                   type="text"
@@ -433,7 +572,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                 />
                 <button
                   type="submit"
-                  className="inline-flex items-center justify-center gap-1.5 px-5 py-2 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold whitespace-nowrap"
+                  className="inline-flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4" />
                   Add Product
@@ -446,6 +585,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                 <table className="w-full text-left border-collapse text-sm">
                   <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
                     <tr>
+                      <th className="py-3 px-4">Photo</th>
                       <th className="py-3 px-4">Product</th>
                       <th className="py-3 px-4">Category</th>
                       <th className="py-3 px-4">Price (PKR)</th>
@@ -458,8 +598,10 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                       <EditableProductRow
                         key={prod.id}
                         product={prod}
+                        availableCategories={availableCategories}
                         onSave={handleUpdateProduct}
                         onDelete={handleDeleteProduct}
+                        onPhotoError={(msg) => setErrorMsg(msg)}
                       />
                     ))}
                   </tbody>
@@ -783,31 +925,103 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
 const EditableProductRow: React.FC<{
   product: Product;
+  availableCategories: string[];
   onSave: (p: Product) => void;
   onDelete: (id: string) => void;
-}> = ({ product, onSave, onDelete }) => {
+  onPhotoError: (msg: string) => void;
+}> = ({ product, availableCategories, onSave, onDelete, onPhotoError }) => {
   const [draft, setDraft] = useState(product);
+  const [customCatMode, setCustomCatMode] = useState(false);
+
+  useEffect(() => {
+    setDraft(product);
+  }, [product]);
+
+  const handleRowPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const compressed = await compressImageFile(file);
+      const next = { ...draft, image: compressed };
+      setDraft(next);
+      onSave(next);
+    } catch (err) {
+      onPhotoError(err instanceof Error ? err.message : 'Failed to upload product photo.');
+    }
+  };
+
   return (
     <tr>
+      <td className="py-3 px-4">
+        <div className="flex items-center gap-2">
+          <img
+            src={assetUrl(draft.image)}
+            alt={draft.name}
+            referrerPolicy="no-referrer"
+            className="w-11 h-9 rounded-md object-cover border border-slate-200 bg-slate-50 shrink-0"
+          />
+          <label className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700 cursor-pointer whitespace-nowrap">
+            <ImagePlus className="w-3 h-3" />
+            Photo
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleRowPhotoChange}
+              className="sr-only"
+            />
+          </label>
+        </div>
+      </td>
       <td className="py-3 px-4">
         <input
           type="text"
           value={draft.name}
           onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-          className="w-full min-w-[180px] px-2.5 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg font-medium"
+          className="w-full min-w-[160px] px-2.5 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-lg font-medium"
         />
       </td>
       <td className="py-3 px-4">
-        <select
-          value={draft.category}
-          onChange={(e) => setDraft({ ...draft, category: e.target.value as ProductCategory })}
-          className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg"
-        >
-          <option value="Makeup">Makeup</option>
-          <option value="Skincare">Skincare</option>
-          <option value="Hair & Salon">Hair &amp; Salon</option>
-          <option value="Parlour Tools">Parlour Tools</option>
-        </select>
+        {!customCatMode ? (
+          <select
+            value={availableCategories.includes(draft.category) ? draft.category : '__other__'}
+            onChange={(e) => {
+              if (e.target.value === '__custom__') {
+                setCustomCatMode(true);
+              } else if (e.target.value !== '__other__') {
+                setDraft({ ...draft, category: e.target.value });
+              }
+            }}
+            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg"
+          >
+            {!availableCategories.includes(draft.category) && (
+              <option value="__other__">{draft.category}</option>
+            )}
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+            <option value="__custom__">+ Custom...</option>
+          </select>
+        ) : (
+          <div className="flex gap-1">
+            <input
+              type="text"
+              value={draft.category}
+              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+              placeholder="Category"
+              className="w-28 px-2 py-1.5 text-xs bg-white border border-orange-400 rounded-lg"
+            />
+            <button
+              type="button"
+              onClick={() => setCustomCatMode(false)}
+              className="px-2 py-1 text-[11px] border border-slate-200 rounded-lg bg-slate-50"
+            >
+              List
+            </button>
+          </div>
+        )}
       </td>
       <td className="py-3 px-4">
         <input
@@ -815,7 +1029,7 @@ const EditableProductRow: React.FC<{
           min={1}
           value={draft.price}
           onChange={(e) => setDraft({ ...draft, price: Number(e.target.value) || 0 })}
-          className="w-28 px-2.5 py-1.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg tabular-nums"
+          className="w-24 px-2.5 py-1.5 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg tabular-nums"
         />
       </td>
       <td className="py-3 px-4">
@@ -830,7 +1044,9 @@ const EditableProductRow: React.FC<{
       <td className="py-3 px-4 text-right whitespace-nowrap space-x-2">
         <button
           type="button"
-          onClick={() => onSave(draft)}
+          onClick={() =>
+            onSave({ ...draft, category: draft.category.trim() || 'Makeup' })
+          }
           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold"
         >
           <Save className="w-3.5 h-3.5" />

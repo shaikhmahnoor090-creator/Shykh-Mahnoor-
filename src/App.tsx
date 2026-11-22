@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ShoppingBag, Search, MapPin, ArrowRight, Database } from 'lucide-react';
 import { DEFAULT_MISMU_DB } from './data/defaultDb';
-import type { MismuDatabase, Order, Product, ProductCategory } from './types/store';
+import { DEFAULT_CATEGORIES, type MismuDatabase, type Order, type Product, type ProductCategory } from './types/store';
 import { assetUrl, formatPKR } from './utils/format';
 import { MismuLogo } from './components/MismuLogo';
 import { ProductCard } from './components/ProductCard';
@@ -12,14 +12,6 @@ import { StoreDbManager } from './components/StoreDbManager';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { fetchStoreDb } from './utils/storeApi';
-
-const CATEGORIES: Array<'All' | ProductCategory> = [
-  'All',
-  'Makeup',
-  'Skincare',
-  'Hair & Salon',
-  'Parlour Tools',
-];
 
 export default function App() {
   const [db, setDb] = useState<MismuDatabase>(DEFAULT_MISMU_DB);
@@ -70,6 +62,15 @@ export default function App() {
     () => db.cities.find((c) => c.id === selectedCityId) || db.cities[0],
     [db.cities, selectedCityId]
   );
+
+  const categories = useMemo<Array<'All' | ProductCategory>>(() => {
+    const seen = new Set<string>(DEFAULT_CATEGORIES);
+    for (const p of db.products) {
+      const c = p.category?.trim();
+      if (c) seen.add(c);
+    }
+    return ['All', ...Array.from(seen)];
+  }, [db.products]);
 
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -371,7 +372,7 @@ export default function App() {
 
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                     <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-lg overflow-x-auto">
-                      {CATEGORIES.map((cat) => (
+                      {categories.map((cat) => (
                         <button
                           key={cat}
                           type="button"
