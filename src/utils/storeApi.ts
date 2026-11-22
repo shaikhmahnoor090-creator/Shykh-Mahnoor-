@@ -537,13 +537,18 @@ export async function createOrder(
   const tcsTrackingId = sanitizeId(`TCS-${Math.floor(785000000 + Math.random() * 19999999)}`, 'TCS');
   const estimatedDelivery =
     payload.tcsServiceTier === 'overnight' ? 'Next-Day TCS Priority' : city.estimatedDays;
+  const tidRaw = payload.paymentPin?.trim().replace(/\s+/g, '') || '';
   const paymentReference =
     payload.paymentMethod === 'easypaisa'
-      ? `EP-${randomCode}`
+      ? tidRaw
+        ? `EP-${tidRaw}`
+        : `EP-${randomCode}`
       : payload.paymentMethod === 'jazzcash'
-      ? `JC-${randomCode}`
+      ? tidRaw
+        ? `JC-${tidRaw}`
+        : `JC-${randomCode}`
       : `COD-${orderNum}`;
-  const paymentVerified = payload.paymentMethod !== 'cod';
+  const paymentVerified = false;
 
   const orderFirestoreDoc: Record<string, unknown> = {
     id: orderId,

@@ -860,9 +860,14 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
             onSubmit={handleSavePayments}
             className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 max-w-3xl"
           >
-            <h2 className="font-display text-lg font-bold text-slate-900">
-              EasyPaisa, JazzCash &amp; TCS Configuration
-            </h2>
+            <div>
+              <h2 className="font-display text-lg font-bold text-slate-900">
+                Apne EasyPaisa, JazzCash &amp; WhatsApp Numbers Set Karein
+              </h2>
+              <p className="text-xs text-slate-600 mt-1">
+                Yahan apne asli account numbers aur WhatsApp number likh kar Save karein. Jab koi customer order karega to usay yahi numbers dikhenge, aur agar aap abhi online payment nahi lena chahtin to sirf Cash on Delivery (COD) on rakh kar EasyPaisa/JazzCash untick kar sakti hain.
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
@@ -878,24 +883,26 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   />
                 </label>
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">Account Title</label>
+                  <label className="block text-xs text-slate-600 mb-1">Your EasyPaisa Account Title</label>
                   <input
                     type="text"
                     value={payDraft.easypaisaAccountTitle}
                     onChange={(e) =>
                       setPayDraft({ ...payDraft, easypaisaAccountTitle: e.target.value })
                     }
+                    placeholder="e.g. Mahnoor Shaikh"
                     className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">EasyPaisa Number</label>
+                  <label className="block text-xs text-slate-600 mb-1">Your EasyPaisa Number</label>
                   <input
                     type="text"
                     value={payDraft.easypaisaAccountNumber}
                     onChange={(e) =>
                       setPayDraft({ ...payDraft, easypaisaAccountNumber: e.target.value })
                     }
+                    placeholder="03XX-XXXXXXX"
                     className="w-full px-3 py-2 text-sm font-mono bg-white border border-slate-200 rounded-lg"
                   />
                 </div>
@@ -914,24 +921,26 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   />
                 </label>
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">Account Title</label>
+                  <label className="block text-xs text-slate-600 mb-1">Your JazzCash Account Title</label>
                   <input
                     type="text"
                     value={payDraft.jazzcashAccountTitle}
                     onChange={(e) =>
                       setPayDraft({ ...payDraft, jazzcashAccountTitle: e.target.value })
                     }
+                    placeholder="e.g. Mahnoor Shaikh"
                     className="w-full px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-600 mb-1">JazzCash Number</label>
+                  <label className="block text-xs text-slate-600 mb-1">Your JazzCash Number</label>
                   <input
                     type="text"
                     value={payDraft.jazzcashAccountNumber}
                     onChange={(e) =>
                       setPayDraft({ ...payDraft, jazzcashAccountNumber: e.target.value })
                     }
+                    placeholder="03XX-XXXXXXX"
                     className="w-full px-3 py-2 text-sm font-mono bg-white border border-slate-200 rounded-lg"
                   />
                 </div>
@@ -939,6 +948,24 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">
+                  Your WhatsApp / Order Support Number
+                </label>
+                <input
+                  type="text"
+                  value={payDraft.supportPhone}
+                  onChange={(e) =>
+                    setPayDraft({
+                      ...payDraft,
+                      supportPhone: e.target.value,
+                    })
+                  }
+                  placeholder="03XX-XXXXXXX"
+                  className="w-full px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-medium text-slate-600 mb-1">
                   Free TCS Delivery Threshold (PKR, 0 to disable)
@@ -956,17 +983,18 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   className="w-full px-3 py-2 text-sm font-mono bg-slate-50 border border-slate-200 rounded-lg"
                 />
               </div>
-              <div className="flex items-end pb-2">
-                <label className="inline-flex items-center gap-2.5 text-sm font-medium text-slate-800 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={payDraft.codEnabled}
-                    onChange={(e) => setPayDraft({ ...payDraft, codEnabled: e.target.checked })}
-                    className="w-4 h-4 accent-orange-600"
-                  />
-                  Enable TCS Cash on Delivery (COD) Storewide
-                </label>
-              </div>
+            </div>
+
+            <div className="pt-1">
+              <label className="inline-flex items-center gap-2.5 text-sm font-medium text-slate-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={payDraft.codEnabled}
+                  onChange={(e) => setPayDraft({ ...payDraft, codEnabled: e.target.checked })}
+                  className="w-4 h-4 accent-orange-600"
+                />
+                Enable TCS Cash on Delivery (COD) Storewide
+              </label>
             </div>
 
             <button
@@ -981,61 +1009,112 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
         {/* Tab 4: Orders & TCS Tracking */}
         {activeTab === 'orders' && (
-          <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
-                  <tr>
-                    <th className="py-3 px-4">Order &amp; TCS ID</th>
-                    <th className="py-3 px-4">Customer &amp; City</th>
-                    <th className="py-3 px-4">Payment</th>
-                    <th className="py-3 px-4 text-right">Total</th>
-                    <th className="py-3 px-4">TCS Tracking Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {db.orders.map((ord) => (
-                    <tr key={ord.id}>
-                      <td className="py-3.5 px-4">
-                        <div className="font-mono font-bold text-slate-900">{ord.id}</div>
-                        <div className="font-mono text-xs text-orange-600">{ord.tcsTrackingId}</div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-900">{ord.customerName}</div>
-                        <div className="text-xs text-slate-500">
-                          {ord.cityName} · {ord.customerPhone}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <div className="text-xs font-medium text-slate-800">
-                          {formatPaymentLabel(ord.paymentMethod)}
-                        </div>
-                        <div className="font-mono text-xs text-slate-500">
-                          {ord.paymentReference}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums">
-                        {formatPKR(ord.total)}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <select
-                          value={ord.status}
-                          onChange={(e) =>
-                            handleUpdateOrderStatus(ord.id, e.target.value as OrderStatus)
-                          }
-                          className="px-2.5 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg"
-                        >
-                          {ORDER_STATUSES.map((st) => (
-                            <option key={st} value={st}>
-                              {st}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-xs text-slate-700">
+              <strong className="text-slate-900">Parcel Pack &amp; TCS Dispatch Guide:</strong>{' '}
+              Jab naya order aaye, to neeche se items aur customer ka poora address dekh kar parcel khud pack karein. Phir apni qareebi <strong>TCS Branch</strong> (ya apne TCS COD pickup rider) ko parcel hand over karein aur yahan se status <strong>Dispatched via TCS</strong> kar dein taake customer site par track kar sake.
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600">
+                    <tr>
+                      <th className="py-3 px-4">Order &amp; TCS ID</th>
+                      <th className="py-3 px-4">Items to Pack</th>
+                      <th className="py-3 px-4">Customer &amp; Address</th>
+                      <th className="py-3 px-4">Payment</th>
+                      <th className="py-3 px-4 text-right">Total</th>
+                      <th className="py-3 px-4">TCS Tracking Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 align-top">
+                    {db.orders.map((ord) => (
+                      <tr key={ord.id}>
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          <div className="font-mono font-bold text-slate-900">{ord.id}</div>
+                          <div className="font-mono text-xs text-orange-600">{ord.tcsTrackingId}</div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const itemsText = ord.items
+                                .map((i) => `${i.name} x${i.quantity}`)
+                                .join(', ');
+                              const slip = [
+                                `Order: ${ord.id} (${ord.tcsTrackingId})`,
+                                `To: ${ord.customerName} | ${ord.customerPhone}`,
+                                `Address: ${ord.address}, ${ord.cityName} (${ord.province}) ${ord.postalCode || ''}`,
+                                `Service: ${ord.tcsServiceTier === 'overnight' ? 'TCS Overnight' : 'TCS Standard'}`,
+                                `Items: ${itemsText}`,
+                                `Collect/Total: ${formatPKR(ord.total)} (${ord.paymentMethod.toUpperCase()})`,
+                              ].join('\n');
+                              void navigator.clipboard?.writeText(slip);
+                              showToast(`Copied parcel slip for ${ord.id}!`);
+                            }}
+                            className="mt-1.5 px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-700"
+                          >
+                            Copy Slip
+                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 min-w-[190px]">
+                          <ul className="space-y-1 text-xs text-slate-700">
+                            {ord.items.map((item, idx) => (
+                              <li key={`${ord.id}-${item.productId}-${idx}`}>
+                                <span className="font-semibold text-slate-900">{item.quantity}x</span>{' '}
+                                {item.name}
+                              </li>
+                            ))}
+                          </ul>
+                        </td>
+                        <td className="py-3.5 px-4 min-w-[210px]">
+                          <div className="font-semibold text-slate-900">{ord.customerName}</div>
+                          <div className="text-xs font-mono text-slate-600 mt-0.5">
+                            {ord.customerPhone}
+                          </div>
+                          <div className="text-xs text-slate-600 mt-1">
+                            {ord.address}
+                          </div>
+                          <div className="text-xs font-medium text-slate-700 mt-0.5">
+                            {ord.cityName}, {ord.province}{' '}
+                            {ord.postalCode ? `(${ord.postalCode})` : ''}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="text-xs font-medium text-slate-800">
+                            {formatPaymentLabel(ord.paymentMethod)}
+                          </div>
+                          <div className="font-mono text-xs text-slate-500">
+                            {ord.paymentReference}
+                          </div>
+                          {ord.paymentAccountNumber && (
+                            <div className="font-mono text-[11px] text-slate-500 mt-0.5">
+                              From: {ord.paymentAccountNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900 tabular-nums whitespace-nowrap">
+                          {formatPKR(ord.total)}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <select
+                            value={ord.status}
+                            onChange={(e) =>
+                              handleUpdateOrderStatus(ord.id, e.target.value as OrderStatus)
+                            }
+                            className="px-2.5 py-1.5 text-xs font-medium bg-slate-50 border border-slate-200 rounded-lg"
+                          >
+                            {ORDER_STATUSES.map((st) => (
+                              <option key={st} value={st}>
+                                {st}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

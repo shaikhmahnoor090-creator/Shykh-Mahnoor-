@@ -14,6 +14,8 @@ import {
   AlertCircle,
   LogIn,
   MessageCircle,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { signInWithGoogle } from '../firebase';
 import type {
@@ -83,6 +85,7 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
   const [submitting, setSubmitting] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [showWhatsAppFallback, setShowWhatsAppFallback] = useState(false);
+  const [copiedAccount, setCopiedAccount] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
@@ -101,7 +104,14 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
   const freeRemaining = Math.max(0, paymentSettings.freeDeliveryThreshold - subtotal);
 
   useEffect(() => {
-    if (!selectedCity?.codAvailable && paymentMethod === 'cod') {
+    const canCod = paymentSettings.codEnabled && Boolean(selectedCity?.codAvailable);
+    if (paymentMethod === 'easypaisa' && !paymentSettings.easypaisaEnabled) {
+      if (paymentSettings.jazzcashEnabled) setPaymentMethod('jazzcash');
+      else if (canCod) setPaymentMethod('cod');
+    } else if (paymentMethod === 'jazzcash' && !paymentSettings.jazzcashEnabled) {
+      if (paymentSettings.easypaisaEnabled) setPaymentMethod('easypaisa');
+      else if (canCod) setPaymentMethod('cod');
+    } else if (paymentMethod === 'cod' && !canCod) {
       if (paymentSettings.easypaisaEnabled) setPaymentMethod('easypaisa');
       else if (paymentSettings.jazzcashEnabled) setPaymentMethod('jazzcash');
     }
@@ -173,14 +183,16 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
       const digits = paymentAccountNumber.replace(/\D/g, '');
       if (!/^03\d{9}$/.test(digits)) {
         setErrorMsg(
-          `Enter a valid 11-digit mobile wallet number (e.g. 03001234567) for ${
+          `Enter your 11-digit sender mobile number (e.g. 03001234567) for ${
             paymentMethod === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'
           }.`
         );
         return;
       }
       if (paymentPin.trim().length < 4) {
-        setErrorMsg('Enter your 4-digit MPIN / OTP confirmation code to authorize the payment.');
+        setErrorMsg(
+          'Enter the Transaction ID (TID) from your EasyPaisa/JazzCash SMS receipt (at least 4 characters).'
+        );
         return;
       }
     }
@@ -732,15 +744,62 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
 
                 {(paymentMethod === 'easypaisa' || paymentMethod === 'jazzcash') && (
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                    <div className="text-xs font-semibold text-slate-800">
-                      {paymentMethod === 'easypaisa'
-                        ? 'EasyPaisa Account Authorization'
-                        : 'JazzCash Wallet Authorization'}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">
+                          Step 1: Send{' '}
+                          <span className="font-mono text-orange-600">{formatPKR(total)}</span> to{' '}
+                          {paymentMethod === 'easypaisa' ? 'EasyPaisa' : 'JazzCash'}
+                        </div>
+                        <div className="text-xs text-slate-700 mt-1">
+                          Title:{' '}
+                          <strong>
+                            {paymentMethod === 'easypaisa'
+                              ? paymentSettings.easypaisaAccountTitle
+                              : paymentSettings.jazzcashAccountTitle}
+                          </strong>
+                          {' · '}
+                          <span className="font-mono font-bold text-slate-900">
+                            {paymentMethod === 'easypaisa'
+                              ? paymentSettings.easypaisaAccountNumber
+                              : paymentSettings.jazzcashAccountNumber}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const num =
+                            paymentMethod === 'easypaisa'
+                              ? paymentSettings.easypaisaAccountNumber
+                              : paymentSettings.jazzcashAccountNumber;
+                          void navigator.clipboard?.writeText(num);
+                          setCopiedAccount(true);
+                          window.setTimeout(() => setCopiedAccount(false), 1800);
+                        }}
+                        className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-[11px] font-semibold text-slate-800 shrink-0"
+                      >
+                        {copiedAccount ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            Copy No.
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="text-xs font-semibold text-slate-800 pt-1 border-t border-slate-200">
+                      Step 2: Apna Sender Number aur Transaction ID (TID) likhein
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-slate-600 mb-1">
-                          Your Wallet Number
+                          Your Sender Number
                         </label>
                         <input
                           type="tel"
@@ -753,22 +812,22 @@ export const CartCheckoutDrawer: React.FC<CartCheckoutDrawerProps> = ({
                       </div>
                       <div>
                         <label className="block text-xs text-slate-600 mb-1">
-                          {paymentMethod === 'easypaisa' ? '4-Digit MPIN / OTP' : 'MPIN / CNIC Last 4'}
+                          Transaction ID (TID) / Ref
                         </label>
                         <input
-                          type="password"
+                          type="text"
                           required
-                          maxLength={6}
+                          maxLength={32}
                           value={paymentPin}
                           onChange={(e) => setPaymentPin(e.target.value)}
-                          placeholder="••••"
+                          placeholder="e.g. 2419804521"
                           className="w-full px-3 py-2 text-sm font-mono bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-orange-500"
                         />
                       </div>
                     </div>
                     <p className="text-xs text-slate-500 flex items-center gap-1.5">
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                      Generates verified transaction receipt upon order confirmation.
+                      Order confirm hone ke baad aap WhatsApp par payment screenshot bhi bhej sakte hain.
                     </p>
                   </div>
                 )}
