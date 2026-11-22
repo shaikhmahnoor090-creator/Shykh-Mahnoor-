@@ -20,13 +20,14 @@ import { StoreDbManager } from './components/StoreDbManager';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import {
+  getInitialStoreDb,
   seedCloudCatalogIfEmpty,
   subscribePublicCatalog,
   subscribeUserOrders,
 } from './utils/storeApi';
 
 export default function App() {
-  const [db, setDb] = useState<MismuDatabase>(DEFAULT_MISMU_DB);
+  const [db, setDb] = useState<MismuDatabase>(() => getInitialStoreDb());
   const [cloudActive, setCloudActive] = useState(false);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const seededOnceRef = useRef(false);
@@ -104,7 +105,7 @@ export default function App() {
 
     if (isOwnerUser(authUser) && !seededOnceRef.current) {
       seededOnceRef.current = true;
-      void seedCloudCatalogIfEmpty(DEFAULT_MISMU_DB);
+      void seedCloudCatalogIfEmpty(getInitialStoreDb());
     }
 
     const unsubOrders = subscribeUserOrders(authUser, (orders) => {

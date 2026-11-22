@@ -16,7 +16,10 @@ import {
   LogOut,
   RefreshCw,
   Search,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
+import firebaseConfig from '../../firebase-applet-config.json';
 import { isOwnerUser, OWNER_EMAIL, signInWithGoogle, signOutUser } from '../firebase';
 import {
   DEFAULT_CATEGORIES,
@@ -82,6 +85,8 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState('');
+  const [copiedDomain, setCopiedDomain] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
 
   const [cityFilter, setCityFilter] = useState('');
@@ -165,6 +170,7 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
 
   const handleOwnerLogin = async () => {
     setErrorMsg('');
+    setUnauthorizedDomain('');
     setAuthBusy(true);
     try {
       const user = await signInWithGoogle();
@@ -178,8 +184,9 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Google Sign-In failed.';
       if (msg.includes('unauthorized-domain')) {
+        setUnauthorizedDomain(window.location.hostname);
         setErrorMsg(
-          `Is website domain (${window.location.hostname}) ko Firebase Console -> Authentication -> Settings -> Authorized domains mein add karein.`
+          `GitHub link (${window.location.hostname}) par Google Login chalaane ke liye is domain ko Firebase Console mein allow karna zaroori hai (sirf 1 baar).`
         );
       } else {
         setErrorMsg(msg);
@@ -522,8 +529,42 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
           </div>
         )}
         {errorMsg && (
-          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-700">
-            {errorMsg}
+          <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-sm text-rose-800 space-y-2.5">
+            <p className="font-medium">{errorMsg}</p>
+            {unauthorizedDomain && (
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(unauthorizedDomain);
+                    setCopiedDomain(true);
+                    window.setTimeout(() => setCopiedDomain(false), 2000);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-800 font-semibold hover:bg-rose-100"
+                >
+                  {copiedDomain ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      Copied: {unauthorizedDomain}
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy Domain ({unauthorizedDomain})
+                    </>
+                  )}
+                </button>
+                <a
+                  href={`https://console.firebase.google.com/project/${firebaseConfig.projectId}/authentication/settings`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-700 hover:bg-rose-800 text-white font-semibold"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open Firebase Authorized Domains
+                </a>
+              </div>
+            )}
           </div>
         )}
 

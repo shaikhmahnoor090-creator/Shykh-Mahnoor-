@@ -86,6 +86,10 @@ function readLocalDb(): MismuDatabase {
   return seeded;
 }
 
+export function getInitialStoreDb(): MismuDatabase {
+  return readLocalDb();
+}
+
 function writeLocalDb(db: MismuDatabase): MismuDatabase {
   const nextDb: MismuDatabase = { ...db, updatedAt: new Date().toISOString() };
   try {
@@ -296,7 +300,7 @@ export function subscribePublicCatalog(callbacks: {
         const list = snap.docs.map((d) => docToProduct(d.data() as Record<string, unknown>, d.id));
         callbacks.onProducts(list, true);
       } else {
-        callbacks.onProducts(DEFAULT_MISMU_DB.products, false);
+        callbacks.onProducts(readLocalDb().products, false);
       }
     },
     (error) => {
@@ -311,7 +315,7 @@ export function subscribePublicCatalog(callbacks: {
         const cloudList = snap.docs.map((d) => docToCity(d.data() as Record<string, unknown>, d.id));
         callbacks.onCities(sortCitiesList(cloudList), true);
       } else {
-        callbacks.onCities(sortCitiesList(DEFAULT_MISMU_DB.cities), false);
+        callbacks.onCities(sortCitiesList(readLocalDb().cities), false);
       }
     },
     (error) => {
@@ -342,7 +346,7 @@ export function subscribePublicCatalog(callbacks: {
           true
         );
       } else {
-        callbacks.onPaymentSettings(DEFAULT_MISMU_DB.paymentSettings, false);
+        callbacks.onPaymentSettings(readLocalDb().paymentSettings, false);
       }
     },
     (error) => {
