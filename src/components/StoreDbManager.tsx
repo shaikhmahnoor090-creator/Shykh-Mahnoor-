@@ -71,7 +71,6 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const [useCustomCat, setUseCustomCat] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const availableCategories = useMemo(() => {
@@ -155,7 +154,6 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
         tagline: '',
         image: PRODUCT_IMAGE_PRESETS[0].url,
       });
-      setUseCustomCat(false);
       showToast('Product saved to Mismu database.');
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : 'Failed to add product.');
@@ -423,53 +421,35 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   />
                 </div>
 
-                <div>
+                <div className="lg:col-span-2">
                   <label className="block text-xs font-medium text-slate-600 mb-1">
-                    Category (Apni Marzi ki Banayein)
+                    Category (Likhein ya Neeche se Chunein)
                   </label>
-                  {!useCustomCat ? (
-                    <select
-                      value={newProd.category}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
-                          setUseCustomCat(true);
-                          setNewProd({ ...newProd, category: '' });
-                        } else {
-                          setNewProd({ ...newProd, category: e.target.value });
-                        }
-                      }}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg"
-                    >
-                      {availableCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                      <option value="__custom__">+ Add Custom Category...</option>
-                    </select>
-                  ) : (
-                    <div className="flex gap-1.5">
-                      <input
-                        type="text"
-                        required
-                        autoFocus
-                        placeholder="Type category (e.g. Nails)"
-                        value={newProd.category}
-                        onChange={(e) => setNewProd({ ...newProd, category: e.target.value })}
-                        className="flex-1 min-w-0 px-3 py-2 text-sm bg-white border border-orange-400 rounded-lg focus:outline-none"
-                      />
+                  <input
+                    type="text"
+                    required
+                    list="mismu-cat-suggestions"
+                    placeholder="Type any category (e.g. Bridal, Nails, Makeup)"
+                    value={newProd.category}
+                    onChange={(e) => setNewProd({ ...newProd, category: e.target.value })}
+                    className="w-full px-3 py-2 text-sm bg-white border border-slate-300 focus:border-orange-500 focus:outline-none rounded-lg"
+                  />
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {availableCategories.map((cat) => (
                       <button
+                        key={cat}
                         type="button"
-                        onClick={() => {
-                          setUseCustomCat(false);
-                          setNewProd({ ...newProd, category: availableCategories[0] || 'Makeup' });
-                        }}
-                        className="px-2.5 py-2 text-xs font-semibold border border-slate-200 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 whitespace-nowrap"
+                        onClick={() => setNewProd({ ...newProd, category: cat })}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition-colors ${
+                          newProd.category.trim().toLowerCase() === cat.toLowerCase()
+                            ? 'bg-orange-600 border-orange-600 text-white'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
                       >
-                        List
+                        {cat}
                       </button>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -513,52 +493,67 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                   className="w-20 h-16 rounded-lg object-cover border border-slate-200 bg-white shrink-0"
                 />
 
-                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-center">
-                  <label className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer whitespace-nowrap">
-                    <ImagePlus className="w-4 h-4" />
-                    <span>{uploadingPhoto ? 'Uploading...' : 'Upload Own Photo'}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleNewPhotoUpload}
-                      className="sr-only"
-                    />
-                  </label>
+                <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end">
+                  <div>
+                    <span className="block text-[11px] font-medium text-slate-500 mb-1">
+                      1. Phone / Gallery Photo
+                    </span>
+                    <label className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer whitespace-nowrap">
+                      <ImagePlus className="w-4 h-4" />
+                      <span>{uploadingPhoto ? 'Uploading...' : 'Upload Own Photo'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleNewPhotoUpload}
+                        className="sr-only"
+                      />
+                    </label>
+                  </div>
 
-                  <select
-                    aria-label="Choose preset photo"
-                    value={
-                      PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image)
-                        ? newProd.image
-                        : '__custom__'
-                    }
-                    onChange={(e) => {
-                      if (e.target.value !== '__custom__') {
-                        setNewProd({ ...newProd, image: e.target.value });
+                  <div>
+                    <span className="block text-[11px] font-medium text-slate-500 mb-1">
+                      2. Ready Sample Photo
+                    </span>
+                    <select
+                      aria-label="Choose ready sample photo"
+                      value={
+                        PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image)
+                          ? newProd.image
+                          : '__custom__'
                       }
-                    }}
-                    className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
-                  >
-                    {!PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image) && (
-                      <option value="__custom__">Custom Photo Selected</option>
-                    )}
-                    {PRODUCT_IMAGE_PRESETS.map((img) => (
-                      <option key={img.url} value={img.url}>
-                        Preset: {img.label}
-                      </option>
-                    ))}
-                  </select>
+                      onChange={(e) => {
+                        if (e.target.value !== '__custom__') {
+                          setNewProd({ ...newProd, image: e.target.value });
+                        }
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
+                    >
+                      {!PRODUCT_IMAGE_PRESETS.some((p) => p.url === newProd.image) && (
+                        <option value="__custom__">Custom Photo Selected</option>
+                      )}
+                      {PRODUCT_IMAGE_PRESETS.map((img) => (
+                        <option key={img.url} value={img.url}>
+                          {img.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <input
-                    type="text"
-                    placeholder="Or paste image URL (https://...)"
-                    value={newProd.image.startsWith('data:') ? '' : newProd.image}
-                    onChange={(e) => {
-                      const val = e.target.value.trim();
-                      if (val) setNewProd({ ...newProd, image: val });
-                    }}
-                    className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
-                  />
+                  <div>
+                    <span className="block text-[11px] font-medium text-slate-500 mb-1">
+                      3. Image Link (Optional)
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="https://..."
+                      value={newProd.image.startsWith('data:') ? '' : newProd.image}
+                      onChange={(e) => {
+                        const val = e.target.value.trim();
+                        if (val) setNewProd({ ...newProd, image: val });
+                      }}
+                      className="w-full px-3 py-2 text-xs bg-white border border-slate-200 rounded-lg"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -579,6 +574,12 @@ export const StoreDbManager: React.FC<StoreDbManagerProps> = ({
                 </button>
               </div>
             </form>
+
+            <datalist id="mismu-cat-suggestions">
+              {availableCategories.map((cat) => (
+                <option key={cat} value={cat} />
+              ))}
+            </datalist>
 
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
@@ -929,9 +930,8 @@ const EditableProductRow: React.FC<{
   onSave: (p: Product) => void;
   onDelete: (id: string) => void;
   onPhotoError: (msg: string) => void;
-}> = ({ product, availableCategories, onSave, onDelete, onPhotoError }) => {
+}> = ({ product, availableCategories: _availableCategories, onSave, onDelete, onPhotoError }) => {
   const [draft, setDraft] = useState(product);
-  const [customCatMode, setCustomCatMode] = useState(false);
 
   useEffect(() => {
     setDraft(product);
@@ -982,46 +982,14 @@ const EditableProductRow: React.FC<{
         />
       </td>
       <td className="py-3 px-4">
-        {!customCatMode ? (
-          <select
-            value={availableCategories.includes(draft.category) ? draft.category : '__other__'}
-            onChange={(e) => {
-              if (e.target.value === '__custom__') {
-                setCustomCatMode(true);
-              } else if (e.target.value !== '__other__') {
-                setDraft({ ...draft, category: e.target.value });
-              }
-            }}
-            className="px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg"
-          >
-            {!availableCategories.includes(draft.category) && (
-              <option value="__other__">{draft.category}</option>
-            )}
-            {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-            <option value="__custom__">+ Custom...</option>
-          </select>
-        ) : (
-          <div className="flex gap-1">
-            <input
-              type="text"
-              value={draft.category}
-              onChange={(e) => setDraft({ ...draft, category: e.target.value })}
-              placeholder="Category"
-              className="w-28 px-2 py-1.5 text-xs bg-white border border-orange-400 rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={() => setCustomCatMode(false)}
-              className="px-2 py-1 text-[11px] border border-slate-200 rounded-lg bg-slate-50"
-            >
-              List
-            </button>
-          </div>
-        )}
+        <input
+          type="text"
+          list="mismu-cat-suggestions"
+          value={draft.category}
+          onChange={(e) => setDraft({ ...draft, category: e.target.value })}
+          placeholder="Type category"
+          className="w-36 px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 focus:border-orange-500 focus:bg-white focus:outline-none rounded-lg"
+        />
       </td>
       <td className="py-3 px-4">
         <input
